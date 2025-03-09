@@ -23,12 +23,12 @@ def load_pdf():
 
 def update_image():
     """更新显示的 PDF 页面"""
-    global tk_img, label, page_label, doc, resize_factor
+    global page_label, doc, resize_factor
     if doc is None:
         return
     page = doc[current_page]
     pix = page.get_pixmap()
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     # 计算窗口高度的 80%
     window_height = root.winfo_height()  # 获取窗口当前高度
     display_height = int(window_height * 0.85)  # 计算 PDF 显示区域的目标高度
@@ -43,7 +43,7 @@ def update_image():
     if paned_w_width > window_width / 2:
         paned_w_width = int(window_width / 2)
     paned_window.sash_place(0, paned_w_width, 0)  # 调整分隔线位置，使两侧更均匀
-    img = img.resize((new_width, new_height), Image.LANCZOS)
+    img = img.resize((new_width, new_height))
     photo = ImageTk.PhotoImage(img)
     canvas.delete("all")
     # 更新 Canvas 大小
@@ -103,7 +103,7 @@ def preprocess_image(image):
     image = image.filter(ImageFilter.MedianFilter())  # 降噪
     enhancer = ImageEnhance.Contrast(image)
     image = enhancer.enhance(2.0)  # 提高对比度
-    image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)  # 放大 2 倍
+    image = image.resize((image.width * 2, image.height * 2))  # 放大 2 倍
     return image
 
 
@@ -118,7 +118,7 @@ def ocr_current_page():
     root.update_idletasks()
     page = doc[current_page]
     pix = page.get_pixmap()
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     img = preprocess_image(img)
 
     # OCR 识别

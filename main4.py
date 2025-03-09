@@ -33,20 +33,27 @@ def update_image():
     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
     # 计算窗口高度的 80%
     window_height = root.winfo_height()  # 获取窗口当前高度
-    display_height = int(window_height * 0.78)  # 计算 PDF 显示区域的目标高度
+    display_height = int(window_height * 0.85)  # 计算 PDF 显示区域的目标高度
     aspect_ratio = img.width / img.height  # 计算宽高比例
     # 按比例调整宽度
     display_width = int(display_height * aspect_ratio)
     # 进行缩放
     new_width = int(display_width * resize_factor)
     new_height = int(display_height * resize_factor)
+    window_width = root.winfo_width()
+    paned_w_width = new_width + 10
+    if paned_w_width > window_width / 2:
+        paned_w_width = int(window_width / 2)
+    paned_window.sash_place(0, paned_w_width, 0)  # 调整分隔线位置，使两侧更均匀
     img = img.resize((new_width, new_height), Image.LANCZOS)
     photo = ImageTk.PhotoImage(img)
+    canvas.delete("all")
     # 更新 Canvas 大小
     canvas.create_image(0, 0, anchor="nw", image=photo)
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))
     page_label.config(text=f"{current_page + 1} / {len(doc)}")
+
 
 
 def next_page(event=None):
@@ -164,19 +171,10 @@ if __name__ == "__main__":
     # 创建一个可调节的 PanedWindow
     paned_window = tk.PanedWindow(root, orient=tk.HORIZONTAL)
     paned_window.pack(fill=tk.BOTH, expand=True)
-    # # 创建主框架
-    # main_frame = tk.Frame(root)
-    # # 让 PDF 显示区域（main_frame）扩展，占据可用空间
-    # main_frame.pack(side=tk.LEFT, padx=10, pady=10, fill=tk.BOTH, expand=False)
+    paned_window.configure(sashrelief=tk.RIDGE, sashwidth=0)
     # 创建主框架（左侧 PDF 显示区域）
-    main_frame = tk.Frame(paned_window, bg="lightgray", width=300)  # 初始宽度
+    main_frame = tk.Frame(paned_window, bg="lightgray")
     paned_window.add(main_frame, stretch="always")
-    # # 在主框架中创建一个子框架
-    # mid_frame = tk.Frame(main_frame, bg="blue", width=200, height=100)
-    # mid_frame.pack(padx=5, pady=5)
-    # # 显示 PDF 的 Label
-    # label = tk.Label(main_frame)
-    # label.pack()
     # 创建 Canvas 用于显示 PDF
     canvas = tk.Canvas(main_frame, bg="white")
     canvas.pack(fill=tk.BOTH, expand=True)
@@ -220,12 +218,8 @@ if __name__ == "__main__":
     btn_ocr = tk.Button(nav_frame, text="识别页面", command=ocr_current_page)
     btn_ocr.pack(side=tk.LEFT, padx=10)
     root.bind("<Control-Return>", lambda event: ocr_current_page())
-
-    # 右侧文本框
-    # text_frame = tk.Frame(root)
-    # text_frame.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.BOTH, expand=True)
     # 创建右侧文本框
-    text_frame = tk.Frame(paned_window, bg="lightblue", width=500)  # 初始宽度
+    text_frame = tk.Frame(paned_window, bg="lightblue")
     paned_window.add(text_frame, stretch="always")
 
     # 默认字体
@@ -256,6 +250,7 @@ if __name__ == "__main__":
 
     btn_set_font = tk.Button(font_control_frame, text="设置", command=change_font)
     btn_set_font.pack(side=tk.LEFT, padx=5)
-
+    # 让 PanedWindow 在初始时平均分配宽度
+    root.update_idletasks()  # 确保 UI 元素已经初始化
     # 运行主循环
     root.mainloop()

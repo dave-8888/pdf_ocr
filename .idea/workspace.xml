@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b6a8b51b-eed6-46d6-bb07-2554e06452f1" name="更改" comment="实现左右两栏可以自由调整宽度">
+    <list default="true" id="b6a8b51b-eed6-46d6-bb07-2554e06452f1" name="更改" comment="去除不需要的代码">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main4.py" beforeDir="false" afterPath="$PROJECT_DIR$/main4.py" afterDir="false" />
     </list>
@@ -200,7 +200,7 @@
       <option name="presentableId" value="Default" />
       <updated>1741441119466</updated>
       <workItem from="1741441122218" duration="5785000" />
-      <workItem from="1741513213322" duration="9955000" />
+      <workItem from="1741513213322" duration="11888000" />
     </task>
     <task id="LOCAL-00001" summary="main pdf 全部转换成文字&#10;main2 pdf预览&#10;main3 图片转换成文字">
       <option name="closed" value="true" />
@@ -234,7 +234,15 @@
       <option name="project" value="LOCAL" />
       <updated>1741525517217</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="去除不需要的代码">
+      <option name="closed" value="true" />
+      <created>1741525596706</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1741525596706</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -245,12 +253,13 @@
     <MESSAGE value="main4 pdf识别第一版" />
     <MESSAGE value="实现放大缩小功能，但是，左右按键不好用了" />
     <MESSAGE value="实现左右两栏可以自由调整宽度" />
-    <option name="LAST_COMMIT_MESSAGE" value="实现左右两栏可以自由调整宽度" />
+    <MESSAGE value="去除不需要的代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="去除不需要的代码" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/pdf_ocr$mian5.coverage" NAME="mian5 覆盖结果" MODIFIED="1741518367557" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/pdf_ocr$main2.coverage" NAME="main2 覆盖结果" MODIFIED="1741514450552" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/pdf_ocr$main4.coverage" NAME="main4 覆盖结果" MODIFIED="1741525439756" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/pdf_ocr$main4.coverage" NAME="main4 覆盖结果" MODIFIED="1741527396464" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/pdf_ocr$main.coverage" NAME="main 覆盖结果" MODIFIED="1741444098238" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/pdf_ocr$main3.coverage" NAME="main3 覆盖结果" MODIFIED="1741514621937" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>

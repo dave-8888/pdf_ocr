@@ -5,7 +5,6 @@ from PIL import Image, ImageTk, ImageEnhance, ImageFilter
 import pytesseract
 import re
 
-from PIL.ImageOps import expand
 
 # 加载 PDF 文档
 doc = None
@@ -125,7 +124,7 @@ def ocr_current_page():
     img = preprocess_image(img)
 
     # OCR 识别
-    config = "--oem 1 --psm 3"
+    config = "--oem 3 --psm 3"
     text = pytesseract.image_to_string(img, lang='chi_sim+eng', config=config)
     text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)  # 去除中文字符间的空格
 
@@ -145,6 +144,8 @@ def change_font(event=None):
     except ValueError:
         status_label.config(text="请输入有效的数字", fg="red")  # 错误提示
 
+def focus_canvas(event):
+    canvas.focus_set()  # 让 canvas 获取焦点
 
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
@@ -178,6 +179,7 @@ if __name__ == "__main__":
     # 创建 Canvas 用于显示 PDF
     canvas = tk.Canvas(main_frame, bg="white")
     canvas.pack(fill=tk.BOTH, expand=True)
+    canvas.bind("<Button-1>",focus_canvas)
 
     # 滚动条
     v_scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL, command=canvas.yview)

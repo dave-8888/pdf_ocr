@@ -5,7 +5,6 @@ from PIL import Image, ImageTk, ImageEnhance, ImageFilter
 import pytesseract
 import re
 
-
 # 加载 PDF 文档
 doc = None
 current_page = 0  # 当前页索引
@@ -52,7 +51,6 @@ def update_image():
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))
     page_label.config(text=f"{current_page + 1} / {len(doc)}")
-
 
 
 def next_page(event=None):
@@ -144,8 +142,10 @@ def change_font(event=None):
     except ValueError:
         status_label.config(text="请输入有效的数字", fg="red")  # 错误提示
 
+
 def focus_canvas(event):
     canvas.focus_set()  # 让 canvas 获取焦点
+
 
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
@@ -179,11 +179,11 @@ if __name__ == "__main__":
     # 创建 Canvas 用于显示 PDF
     canvas = tk.Canvas(main_frame, bg="white")
     canvas.pack(fill=tk.BOTH, expand=True)
-    canvas.bind("<Button-1>",focus_canvas)
+    canvas.bind("<Button-1>", focus_canvas)
 
     # 滚动条
     v_scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL, command=canvas.yview)
-    v_scroll.pack(side=tk.RIGHT,fill=tk.Y,expand=False)
+    v_scroll.pack(side=tk.RIGHT, fill=tk.Y, expand=False)
     canvas.config(yscrollcommand=v_scroll.set)
 
     h_scroll = tk.Scrollbar(canvas, orient=tk.HORIZONTAL, command=canvas.xview)

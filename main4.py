@@ -8,7 +8,7 @@ import re
 # 加载 PDF 文档
 doc = None
 current_page = 0  # 当前页索引
-resize_factor = 1.0  # 缩放比例
+resize_factor = 0.5  # 缩放比例
 
 
 def load_pdf():
@@ -97,6 +97,10 @@ def ocr_current_page():
     global current_page, text_box, doc
     if doc is None:
         return
+    # 清空文本框并显示状态信息
+    text_box.delete(1.0, tk.END)
+    status_label.config(text="正在识别，请稍候...")
+    root.update_idletasks()
     page = doc[current_page]
     pix = page.get_pixmap()
     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
@@ -110,6 +114,8 @@ def ocr_current_page():
     # 在文本框中显示结果
     text_box.delete(1.0, tk.END)
     text_box.insert(tk.END, text)
+    # 更新状态
+    status_label.config(text="OCR 识别完成！")
 
 
 if __name__ == "__main__":
@@ -130,6 +136,9 @@ if __name__ == "__main__":
     btn_load = tk.Button(top_frame, text="导入 PDF", command=load_pdf)
     btn_load.pack(side=tk.LEFT, padx=5)
 
+    # 状态显示标签
+    status_label = tk.Label(top_frame, text="", fg="blue")
+    status_label.pack(side=tk.LEFT, padx=10)
     # 创建主框架
     main_frame = tk.Frame(root)
     main_frame.pack(side=tk.LEFT, padx=10, pady=10)

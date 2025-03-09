@@ -1,33 +1,107 @@
-import fitz
-from PIL import Image, ImageEnhance, ImageFilter
+import fitz  # PyMuPDF
+import tkinter as tk
+from tkinter import filedialog, ttk
+from PIL import Image, ImageTk, ImageEnhance, ImageFilter
 import pytesseract
-import os
 import re
 
 
-def extract_images(pdf_path, output_folder):
-    """从 PDF 提取图片，保持原始方向"""
-    doc = fitz.open(pdf_path)
-    os.makedirs(output_folder, exist_ok=True)
-
-    for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
-        image_list = page.get_images(full=True)
-        for img_index, img in enumerate(image_list):
-            xref = img[0]
-            base_image = doc.extract_image(xref)
-            image_bytes = base_image["image"]
-            image_ext = base_image["ext"]
-            image_path = os.path.join(output_folder, f"page{page_num}_img{img_index}.{image_ext}")
-            with open(image_path, "wb") as f:
-                f.write(image_bytes)
-
-    doc.close()
+# 加载 PDF 文档
+doc = None
+current_page = 0  # 当前页索引
+resize_factor = 1  # 缩放比例
 
 
-def preprocess_image(image_path):
+def load_pdf():
+    """加载 PDF 文件"""
+    global doc, current_page
+    file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+    if file_path:
+        doc = fitz.open(file_path)
+        current_page = 0
+        update_image()
+
+
+def update_image():
+    """更新显示的 PDF 页面"""
+    global tk_img, label, page_label, doc, resize_factor
+    if doc is None:
+        return
+    page = doc[current_page]
+    pix = page.get_pixmap()
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    # 计算窗口高度的 80%
+    window_height = root.winfo_height()  # 获取窗口当前高度
+    display_height = int(window_height * 0.85)  # 计算 PDF 显示区域的目标高度
+    aspect_ratio = img.width / img.height  # 计算宽高比例
+    # 按比例调整宽度
+    display_width = int(display_height * aspect_ratio)
+    # 进行缩放
+    new_width = int(display_width * resize_factor)
+    new_height = int(display_height * resize_factor)
+    window_width = root.winfo_width()
+    paned_w_width = new_width + 10
+    if paned_w_width > window_width / 2:
+        paned_w_width = int(window_width / 2)
+    paned_window.sash_place(0, paned_w_width, 0)  # 调整分隔线位置，使两侧更均匀
+    img = img.resize((new_width, new_height), Image.LANCZOS)
+    photo = ImageTk.PhotoImage(img)
+    canvas.delete("all")
+    # 更新 Canvas 大小
+    canvas.create_image(0, 0, anchor="nw", image=photo)
+    canvas.image = photo
+    canvas.config(scrollregion=canvas.bbox("all"))
+    page_label.config(text=f"{current_page + 1} / {len(doc)}")
+
+
+
+def next_page(event=None):
+    """显示下一页"""
+    if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
+        global current_page
+        if doc and current_page < len(doc) - 1:
+            current_page += 1
+            update_image()
+
+
+def prev_page(event=None):
+    """显示上一页"""
+    if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
+        global current_page
+        if doc and current_page > 0:
+            current_page -= 1
+            update_image()
+
+
+def go_to_page(event=None):
+    """跳转到指定页码"""
+    global current_page
+    try:
+        page_num = int(entry_page.get()) - 1  # 用户输入的是从 1 开始的页码
+        if doc and 0 <= page_num < len(doc):
+            current_page = page_num
+            update_image()
+    except ValueError:
+        pass  # 处理无效输入
+
+
+def zoom_in():
+    """放大 PDF 页面"""
+    global resize_factor
+    resize_factor *= 1.1
+    update_image()
+
+
+def zoom_out():
+    """缩小 PDF 页面"""
+    global resize_factor
+    resize_factor /= 1.1
+    update_image()
+
+
+def preprocess_image(image):
     """预处理图片，提高 OCR 识别效果"""
-    image = Image.open(image_path).convert("L")  # 转灰度
+    image = image.convert("L")  # 转灰度
     image = image.filter(ImageFilter.MedianFilter())  # 降噪
     enhancer = ImageEnhance.Contrast(image)
     image = enhancer.enhance(2.0)  # 提高对比度
@@ -35,52 +109,150 @@ def preprocess_image(image_path):
     return image
 
 
-def ocr_image(image_path, lang='chi_sim+eng'):
-    """对单张图片进行 OCR 识别"""
-    image = preprocess_image(image_path)
-    config = "--oem 1 --psm 3"  # 选择 OCR 引擎和页面分割模式
-    text = pytesseract.image_to_string(image, lang=lang, config=config)
-    return text
+def ocr_current_page():
+    """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
+    global current_page, text_box, doc
+    if doc is None:
+        return
+    # 清空文本框并显示状态信息
+    text_box.delete(1.0, tk.END)
+    status_label.config(text="正在识别，请稍候...")
+    root.update_idletasks()
+    page = doc[current_page]
+    pix = page.get_pixmap()
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    img = preprocess_image(img)
+
+    # OCR 识别
+    config = "--oem 3 --psm 3"
+    text = pytesseract.image_to_string(img, lang='chi_sim+eng', config=config)
+    text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)  # 去除中文字符间的空格
+
+    # 在文本框中显示结果
+    text_box.delete(1.0, tk.END)
+    text_box.insert(tk.END, text)
+    # 更新状态
+    status_label.config(text="OCR 识别完成！")
 
 
-def remove_spaces_between_chinese(text):
-    """去除中文字符之间的空格，保留英文单词之间的空格"""
-    # 使用正则表达式匹配中文字符之间的空格并去除
-    # 正则表达式解释：([\u4e00-\u9fff]) 匹配一个中文字符，\s+ 匹配一个或多个空格，(?=[\u4e00-\u9fff]) 确保空格后面也是中文字符
-    cleaned_text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)
-    return cleaned_text
+def change_font(event=None):
+    """修改文本框的字体大小"""
+    try:
+        new_font = font_var.get()  # 获取选择的字体
+        new_size = int(font_size_entry.get())  # 获取输入框中的字体大小
+        text_box.config(font=(new_font, new_size))  # 设置新的字体大小
+    except ValueError:
+        status_label.config(text="请输入有效的数字", fg="red")  # 错误提示
 
-
-def pdf_to_text(pdf_path, output_folder, lang='chi_sim+eng'):
-    """将 PDF 转换为文本，逐页处理并输出"""
-    temp_folder = "temp_images"
-    os.makedirs(output_folder, exist_ok=True)
-    extract_images(pdf_path, temp_folder)
-
-    image_files = sorted(os.listdir(temp_folder))  # 按文件名排序，确保顺序一致
-
-    for img_file in image_files:
-        img_path = os.path.join(temp_folder, img_file)
-        if img_path.lower().endswith(('png', 'jpg', 'jpeg')):
-            page_num = int(img_file.split("_")[0].replace("page", ""))  # 获取页码
-            print(f"正在处理第 {page_num + 1} 页...")
-
-            # OCR 识别
-            text = ocr_image(img_path, lang)
-
-            # 去除中文字符之间的空格
-            text = remove_spaces_between_chinese(text)
-
-            # 逐页保存结果
-            page_txt_path = os.path.join(output_folder, f"page{page_num + 1}.txt")
-            with open(page_txt_path, "w", encoding="utf-8") as f:
-                f.write(text)
-            print(f"第 {page_num + 1} 页 OCR 处理完成，结果已保存至 {page_txt_path}")
-
-    print("所有页面处理完成！")
-
+def focus_canvas(event):
+    canvas.focus_set()  # 让 canvas 获取焦点
 
 if __name__ == "__main__":
-    pdf_path = "input.pdf"  # 输入 PDF 文件路径
-    output_folder = "output_text"  # 输出文本文件夹
-    pdf_to_text(pdf_path, output_folder, lang='chi_sim+eng')  # 进行 OCR 识别
+    # 创建 Tkinter 窗口
+    root = tk.Tk()
+    root.title("pdf 识别")
+    root.geometry("1000x800")  # 设置窗口默认大小
+
+    # 顶部按钮栏
+    top_frame = tk.Frame(root)
+    top_frame.pack(fill=tk.X, pady=5)
+
+    btn_zoom_in = tk.Button(top_frame, text="放大", command=zoom_in)
+    btn_zoom_in.pack(side=tk.LEFT, padx=5)
+
+    btn_zoom_out = tk.Button(top_frame, text="缩小", command=zoom_out)
+    btn_zoom_out.pack(side=tk.LEFT, padx=5)
+
+    btn_load = tk.Button(top_frame, text="导入 PDF", command=load_pdf)
+    btn_load.pack(side=tk.LEFT, padx=5)
+
+    # 状态显示标签
+    status_label = tk.Label(top_frame, text="", fg="blue")
+    status_label.pack(side=tk.LEFT, padx=10)
+    # 创建一个可调节的 PanedWindow
+    paned_window = tk.PanedWindow(root, orient=tk.HORIZONTAL)
+    paned_window.pack(fill=tk.BOTH, expand=True)
+    paned_window.configure(sashrelief=tk.RIDGE, sashwidth=0)
+    # 创建主框架（左侧 PDF 显示区域）
+    main_frame = tk.Frame(paned_window, bg="lightgray")
+    paned_window.add(main_frame, stretch="always")
+    # 创建 Canvas 用于显示 PDF
+    canvas = tk.Canvas(main_frame, bg="white")
+    canvas.pack(fill=tk.BOTH, expand=True)
+    canvas.bind("<Button-1>",focus_canvas)
+
+    # 滚动条
+    v_scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL, command=canvas.yview)
+    v_scroll.pack(side=tk.RIGHT,fill=tk.Y,expand=False)
+    canvas.config(yscrollcommand=v_scroll.set)
+
+    h_scroll = tk.Scrollbar(canvas, orient=tk.HORIZONTAL, command=canvas.xview)
+    h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+    canvas.config(xscrollcommand=h_scroll.set)
+
+    # 页码显示
+    page_label = tk.Label(canvas, text="")  # 先创建空文本
+    page_label.pack(side=tk.BOTTOM)
+
+    # 控件容器
+    nav_frame = tk.Frame(main_frame)
+    # 让按钮栏固定在 main_frame 底部
+    nav_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10, anchor="s")
+
+    # 上一页按钮
+    btn_prev = tk.Button(nav_frame, text="上一页", command=prev_page)
+    btn_prev.pack(side=tk.LEFT, padx=10)
+    root.bind("<Left>", prev_page)  # 绑定左箭头键
+
+    # 输入框和跳转按钮
+    entry_page = tk.Entry(nav_frame, width=5)
+    entry_page.pack(side=tk.LEFT, padx=5)
+    entry_page.bind("<Return>", go_to_page)  # 绑定回车键
+    btn_go = tk.Button(nav_frame, text="跳转", command=go_to_page)
+    btn_go.pack(side=tk.LEFT, padx=5)
+
+    # 下一页按钮
+    btn_next = tk.Button(nav_frame, text="下一页", command=next_page)
+    btn_next.pack(side=tk.LEFT, padx=10)
+    root.bind("<Right>", next_page)  # 绑定右箭头键
+
+    # OCR 按钮
+    btn_ocr = tk.Button(nav_frame, text="识别页面", command=ocr_current_page)
+    btn_ocr.pack(side=tk.LEFT, padx=10)
+    root.bind("<Control-Return>", lambda event: ocr_current_page())
+    # 创建右侧文本框
+    text_frame = tk.Frame(paned_window, bg="lightblue")
+    paned_window.add(text_frame, stretch="always")
+
+    # 默认字体
+    default_font = "微软雅黑"
+    text_font = (default_font, 12)  # 初始字体大小 12
+    text_box = tk.Text(text_frame, wrap=tk.WORD, width=50, height=30, font=text_font)
+    text_box.configure(bg="#F5F5D5", fg="blue")
+    text_box.pack(fill=tk.BOTH, expand=True)
+
+    # 控制字体大小的输入框和按钮
+    font_control_frame = tk.Frame(text_frame)
+    font_control_frame.pack(fill=tk.X, pady=5)
+
+    tk.Label(font_control_frame, text="字体:").pack(side=tk.LEFT, padx=5)
+
+    font_var = tk.StringVar(value=default_font)
+    font_options = ["宋体", "黑体", "楷体", "微软雅黑", "仿宋", "Arial", "Times New Roman", "Courier", "Verdana"]
+    font_dropdown = ttk.Combobox(font_control_frame, textvariable=font_var, values=font_options, state="readonly")
+    font_dropdown.pack(side=tk.LEFT, padx=5)
+    font_dropdown.bind("<<ComboboxSelected>>", change_font)
+
+    tk.Label(font_control_frame, text="大小:").pack(side=tk.LEFT, padx=5)
+
+    font_size_entry = tk.Entry(font_control_frame, width=5)
+    font_size_entry.pack(side=tk.LEFT, padx=5)
+    font_size_entry.insert(0, "12")  # 默认字体大小 12
+    font_size_entry.bind("<Return>", change_font)  # 绑定回车键
+
+    btn_set_font = tk.Button(font_control_frame, text="设置", command=change_font)
+    btn_set_font.pack(side=tk.LEFT, padx=5)
+    # 让 PanedWindow 在初始时平均分配宽度
+    root.update_idletasks()  # 确保 UI 元素已经初始化
+    # 运行主循环
+    root.mainloop()

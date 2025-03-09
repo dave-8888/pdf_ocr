@@ -41,19 +41,8 @@ def update_image():
     new_width = int(display_width * resize_factor)
     new_height = int(display_height * resize_factor)
     img = img.resize((new_width, new_height), Image.LANCZOS)
-    # 获取屏幕宽度，限制最大宽度为屏幕的 50%
-    screen_width = root.winfo_screenwidth()
-    max_display_width = int(screen_width * 0.5)
-    new_can_width = new_width + 10
-    new_can_height = new_height + 10
-    # 确保宽度不超过屏幕 50%
-    if display_width > max_display_width:
-        new_can_width = max_display_width + 10
-        new_can_height = int(display_width / aspect_ratio) + 10
     photo = ImageTk.PhotoImage(img)
-
     # 更新 Canvas 大小
-    canvas.config(width=new_can_width, height=new_can_height)
     canvas.create_image(0, 0, anchor="nw", image=photo)
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))

@@ -2,7 +2,7 @@ import sqlite3
 
 import fitz  # PyMuPDF
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog, ttk, font
 from PIL import Image, ImageTk, ImageEnhance, ImageFilter
 import pytesseract
 import re
@@ -202,11 +202,27 @@ def load_text_from_database():
         status_label.config(text=f"查询失败: {e}", fg="red")
 
 
+def show_menu(event):
+    menu.post(event.x_root, event.y_root)  # 在鼠标点击处弹出菜单
+
+
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
     root = tk.Tk()
     root.title("pdf 识别")
     root.geometry("1000x800")  # 设置窗口默认大小
+    # 创建自定义菜单栏
+    menu_frame = tk.Frame(root, height=12)  # 这里可以控制高度
+    menu_frame.pack(fill="x")
+
+    # 创建菜单按钮（点击后弹出菜单）
+    menu_label = tk.Label(menu_frame, text="文件", padx=5, pady=5,bg="lightgray")
+    menu_label.pack(side="left")
+    menu_label.bind("<Button-1>", show_menu)  # 绑定鼠标左键点击事件
+
+    # 创建弹出菜单
+    menu = tk.Menu(root, tearoff=0)
+    menu.add_command(label="导入 PDF", command=load_pdf)
 
     # 顶部按钮栏
     top_frame = tk.Frame(root)
@@ -218,8 +234,6 @@ if __name__ == "__main__":
     btn_zoom_out = tk.Button(top_frame, text="缩小", command=zoom_out)
     btn_zoom_out.pack(side=tk.LEFT, padx=5)
 
-    btn_load = tk.Button(top_frame, text="导入 PDF", command=load_pdf)
-    btn_load.pack(side=tk.LEFT, padx=5)
     # 状态显示标签
     status_label = tk.Label(top_frame, text="", fg="blue")
     status_label.pack(side=tk.LEFT, padx=10)

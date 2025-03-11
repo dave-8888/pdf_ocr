@@ -1,3 +1,5 @@
+import sqlite3
+
 import fitz  # PyMuPDF
 import tkinter as tk
 from tkinter import filedialog, ttk
@@ -147,6 +149,30 @@ def focus_canvas(event):
     canvas.focus_set()  # 让 canvas 获取焦点
 
 
+def save_to_database():
+    """将 OCR 识别的文本保存到 SQLite 数据库"""
+    text = text_box.get(1.0, tk.END).strip()
+    if not text:
+        status_label.config(text="没有可保存的文本！", fg="red")
+        return
+    try:
+        conn = sqlite3.connect("ocr_results.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ocr_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                page INTEGER,
+                text TEXT
+            )
+        """
+        )
+        cursor.execute("INSERT INTO ocr_data (page, text) VALUES (?, ?)", (current_page + 1, text))
+        conn.commit()
+        conn.close()
+        status_label.config(text="OCR 结果已保存！", fg="green")
+    except Exception as e:
+        status_label.config(text=f"保存失败: {e}", fg="red")
+
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
     root = tk.Tk()
@@ -252,6 +278,9 @@ if __name__ == "__main__":
 
     btn_set_font = tk.Button(font_control_frame, text="设置", command=change_font)
     btn_set_font.pack(side=tk.LEFT, padx=5)
+    # 在文本框下方添加保存按钮
+    btn_save = tk.Button(text_frame, text="保存到数据库", command=save_to_database)
+    btn_save.pack(pady=5)
     # 让 PanedWindow 在初始时平均分配宽度
     root.update_idletasks()  # 确保 UI 元素已经初始化
     # 运行主循环

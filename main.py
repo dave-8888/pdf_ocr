@@ -321,8 +321,8 @@ if __name__ == "__main__":
     btn_set_font = tk.Button(font_control_frame, text="设置", command=change_font)
     btn_set_font.pack(side=tk.LEFT, padx=5)
     # 在文本框下方添加保存按钮
-    btn_save = tk.Button(text_frame, text="保存到数据库", command=save_to_database)
-    btn_save.pack(pady=5)
+    btn_save = tk.Button(font_control_frame, text="保存文本", command=save_to_database)
+    btn_save.pack(side=tk.LEFT,padx=5,pady=5)
     # 绑定 Ctrl + S 快捷键到保存功能
     root.bind("<Control-s>", lambda event: save_to_database())
     # 让 PanedWindow 在初始时平均分配宽度

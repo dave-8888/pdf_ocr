@@ -165,20 +165,21 @@ def save_to_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 filename TEXT,
                 page INTEGER,
-                text TEXT
+                text TEXT,
+                UNIQUE(filename, page)  -- 确保 filename 和 page 组合是唯一的
             )
-        """
-                       )
+        """)
         filename = doc.name if doc else "Unknown"
-        cursor.execute("INSERT INTO ocr_data (filename, page, text) VALUES (?, ?, ?)",
-                       (filename, current_page + 1, text))
+        cursor.execute("""
+            INSERT INTO ocr_data (filename, page, text)
+            VALUES (?, ?, ?)
+            ON CONFLICT(filename, page) DO UPDATE SET text = excluded.text
+        """, (filename, current_page + 1, text))
         conn.commit()
         conn.close()
-        status_label.config(text="OCR 结果已保存！", fg="green")
+        status_label.config(text="OCR 结果已保存或更新！", fg="green")
     except Exception as e:
         status_label.config(text=f"保存失败: {e}", fg="red")
-
-
 def load_text_from_database():
     """根据当前文件名和页码，从数据库中加载 OCR 识别的文本并显示"""
     global doc, text_box, current_page
@@ -219,7 +220,6 @@ if __name__ == "__main__":
 
     btn_load = tk.Button(top_frame, text="导入 PDF", command=load_pdf)
     btn_load.pack(side=tk.LEFT, padx=5)
-
     # 状态显示标签
     status_label = tk.Label(top_frame, text="", fg="blue")
     status_label.pack(side=tk.LEFT, padx=10)
@@ -309,6 +309,8 @@ if __name__ == "__main__":
     # 在文本框下方添加保存按钮
     btn_save = tk.Button(text_frame, text="保存到数据库", command=save_to_database)
     btn_save.pack(pady=5)
+    # 绑定 Ctrl + S 快捷键到保存功能
+    root.bind("<Control-s>", lambda event: save_to_database())
     # 让 PanedWindow 在初始时平均分配宽度
     root.update_idletasks()  # 确保 UI 元素已经初始化
     # 运行主循环

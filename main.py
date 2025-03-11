@@ -53,6 +53,7 @@ def update_image():
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))
     page_label.config(text=f"{current_page + 1} / {len(doc)}")
+    load_text_from_database()
 
 
 def next_page(event=None):
@@ -116,7 +117,7 @@ def ocr_current_page():
         return
     # 清空文本框并显示状态信息
     text_box.delete(1.0, tk.END)
-    status_label.config(text="正在识别，请稍候...")
+    status_label.config(text="正在识别，请稍候...",fg="blue")
     root.update_idletasks()
     page = doc[current_page]
     pix = page.get_pixmap()
@@ -132,7 +133,7 @@ def ocr_current_page():
     text_box.delete(1.0, tk.END)
     text_box.insert(tk.END, text)
     # 更新状态
-    status_label.config(text="OCR 识别完成！")
+    status_label.config(text="OCR 识别完成！" ,fg="blue")
 
 
 def change_font(event=None):
@@ -151,6 +152,7 @@ def focus_canvas(event):
 
 def save_to_database():
     """将 OCR 识别的文本保存到 SQLite 数据库"""
+    global doc
     text = text_box.get(1.0, tk.END).strip()
     if not text:
         status_label.config(text="没有可保存的文本！", fg="red")
@@ -161,17 +163,43 @@ def save_to_database():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS ocr_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT,
                 page INTEGER,
                 text TEXT
             )
         """
-        )
-        cursor.execute("INSERT INTO ocr_data (page, text) VALUES (?, ?)", (current_page + 1, text))
+                       )
+        filename = doc.name if doc else "Unknown"
+        cursor.execute("INSERT INTO ocr_data (filename, page, text) VALUES (?, ?, ?)",
+                       (filename, current_page + 1, text))
         conn.commit()
         conn.close()
         status_label.config(text="OCR 结果已保存！", fg="green")
     except Exception as e:
         status_label.config(text=f"保存失败: {e}", fg="red")
+
+
+def load_text_from_database():
+    """根据当前文件名和页码，从数据库中加载 OCR 识别的文本并显示"""
+    global doc, text_box, current_page
+    if doc is None:
+        return
+    try:
+        conn = sqlite3.connect("ocr_results.db")
+        cursor = conn.cursor()
+        filename = doc.name if doc else "Unknown"
+        cursor.execute("SELECT text FROM ocr_data WHERE filename = ? AND page = ?", (filename, current_page + 1))
+        result = cursor.fetchone()
+        conn.close()
+        text_box.delete(1.0, tk.END)  # 清空文本框
+        if result:
+            text_box.insert(tk.END, result[0])  # 显示查询到的文本
+            status_label.config(text="已加载 OCR 结果", fg="blue")
+        else:
+            status_label.config(text="无 OCR 结果", fg="red")
+    except Exception as e:
+        status_label.config(text=f"查询失败: {e}", fg="red")
+
 
 if __name__ == "__main__":
     # 创建 Tkinter 窗口

@@ -1,4 +1,8 @@
+import json
+import os
 import sqlite3
+import traceback
+from traceback import print_exc
 
 import fitz  # PyMuPDF
 import tkinter as tk
@@ -12,6 +16,8 @@ doc = None
 current_page = 0  # 当前页索引
 resize_factor = 1  # 缩放比例
 rotation_angle = 0  # 旋转角度
+# 状态文件路径
+STATE_FILE = "app_state.json"
 
 
 def load_pdf():
@@ -120,7 +126,7 @@ def save_pdf():
 
     # 直接覆盖原 PDF
     if pdf_path:
-        doc.save(pdf_path,incremental=True, encryption=0)  # 不弹出对话框，直接保存
+        doc.save(pdf_path, incremental=True, encryption=0)  # 不弹出对话框，直接保存
         status_label.config(text="当前页旋转并保存成功！", fg="green")
     else:
         status_label.config(text="错误：无法覆盖原 PDF（未找到路径）", fg="red")
@@ -247,6 +253,49 @@ def on_mouse_wheel(event):
             zoom_out()
 
 
+def save_state():
+    """保存当前文件路径和页面状态"""
+    global pdf_path, current_page
+    if not pdf_path:
+        return
+
+    state = {
+        "pdf_path": pdf_path,
+        "current_page": current_page
+    }
+
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+
+def on_closing():
+    """窗口关闭时调用"""
+    save_state()  # 先保存状态
+    root.destroy()  # 关闭窗口
+
+
+def load_state():
+    """加载上次的 PDF 文件路径和页面"""
+    global pdf_path, current_page, doc
+    if not os.path.exists(STATE_FILE):
+        return
+
+    try:
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            state = json.load(f)
+
+        pdf_path = state.get("pdf_path", "")
+        current_page = state.get("current_page", 0)
+
+        if pdf_path and os.path.exists(pdf_path):
+            doc = fitz.open(pdf_path)  # 重新打开 PDF
+            status_label.config(text=f"恢复上次文件: {pdf_path}", fg="blue")
+            update_image()
+        else:
+            pdf_path = ""  # 避免无效路径
+    except Exception as e:
+        traceback.print_exc()
+        print(f"恢复状态失败: {e}")
 
 
 if __name__ == "__main__":
@@ -369,7 +418,11 @@ if __name__ == "__main__":
     btn_save.pack(side=tk.LEFT, padx=5, pady=5)
     # 绑定 Ctrl + S 快捷键到保存功能
     root.bind("<Control-s>", lambda event: save_to_database())
+    # 绑定窗口关闭事件
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     # 让 PanedWindow 在初始时平均分配宽度
     root.update_idletasks()  # 确保 UI 元素已经初始化
+    # 启动时加载状态
+    load_state()
     # 运行主循环
     root.mainloop()

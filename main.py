@@ -58,20 +58,28 @@ def update_image():
 
 def next_page(event=None):
     """显示下一页"""
-    if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
-        global current_page
-        if doc and current_page < len(doc) - 1:
-            current_page += 1
-            update_image()
+    # if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
+    #     global current_page
+    #     if doc and current_page < len(doc) - 1:
+    #         current_page += 1
+    #         update_image()
+    global current_page
+    if doc and current_page < len(doc) - 1:
+        current_page += 1
+        update_image()
 
 
 def prev_page(event=None):
     """显示上一页"""
-    if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
-        global current_page
-        if doc and current_page > 0:
-            current_page -= 1
-            update_image()
+    # if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
+    #     global current_page
+    #     if doc and current_page > 0:
+    #         current_page -= 1
+    #         update_image()
+    global current_page
+    if doc and current_page > 0:
+        current_page -= 1
+        update_image()
 
 
 def go_to_page(event=None):
@@ -86,14 +94,14 @@ def go_to_page(event=None):
         pass  # 处理无效输入
 
 
-def zoom_in():
+def zoom_in(event=None):
     """放大 PDF 页面"""
     global resize_factor
     resize_factor *= 1.1
     update_image()
 
 
-def zoom_out():
+def zoom_out(event=None):
     """缩小 PDF 页面"""
     global resize_factor
     resize_factor /= 1.1
@@ -117,15 +125,15 @@ def ocr_current_page():
         return
     # 清空文本框并显示状态信息
     text_box.delete(1.0, tk.END)
-    status_label.config(text="正在识别，请稍候...",fg="blue")
+    status_label.config(text="正在识别，请稍候...", fg="blue")
     root.update_idletasks()
     page = doc[current_page]
     pix = page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-    img = preprocess_image(img)
+    # img = preprocess_image(img)
 
     # OCR 识别
-    config = "--oem 3 --psm 3"
+    config = "--oem 1 --psm 3"
     text = pytesseract.image_to_string(img, lang='chi_sim+eng', config=config)
     text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)  # 去除中文字符间的空格
 
@@ -133,7 +141,7 @@ def ocr_current_page():
     text_box.delete(1.0, tk.END)
     text_box.insert(tk.END, text)
     # 更新状态
-    status_label.config(text="OCR 识别完成！" ,fg="blue")
+    status_label.config(text="OCR 识别完成！", fg="blue")
 
 
 def change_font(event=None):
@@ -180,6 +188,8 @@ def save_to_database():
         status_label.config(text="OCR 结果已保存或更新！", fg="green")
     except Exception as e:
         status_label.config(text=f"保存失败: {e}", fg="red")
+
+
 def load_text_from_database():
     """根据当前文件名和页码，从数据库中加载 OCR 识别的文本并显示"""
     global doc, text_box, current_page
@@ -206,6 +216,14 @@ def show_menu(event):
     menu.post(event.x_root, event.y_root)  # 在鼠标点击处弹出菜单
 
 
+# 绑定 Ctrl + 鼠标滚轮
+def on_mouse_wheel(event):
+    if event.state & 0x0004:  # 检测 Ctrl 是否按下（Windows & Linux）
+        if event.delta > 0:
+            zoom_in()
+        else:
+            zoom_out()
+
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
     root = tk.Tk()
@@ -216,7 +234,7 @@ if __name__ == "__main__":
     menu_frame.pack(fill="x")
 
     # 创建菜单按钮（点击后弹出菜单）
-    menu_label = tk.Label(menu_frame, text="文件", padx=5, pady=5,bg="lightgray")
+    menu_label = tk.Label(menu_frame, text="文件", padx=5, pady=5, bg="lightgray")
     menu_label.pack(side="left")
     menu_label.bind("<Button-1>", show_menu)  # 绑定鼠标左键点击事件
 
@@ -228,11 +246,11 @@ if __name__ == "__main__":
     top_frame = tk.Frame(root)
     top_frame.pack(fill=tk.X, pady=5)
 
-    btn_zoom_in = tk.Button(top_frame, text="放大", command=zoom_in)
-    btn_zoom_in.pack(side=tk.LEFT, padx=5)
-
-    btn_zoom_out = tk.Button(top_frame, text="缩小", command=zoom_out)
-    btn_zoom_out.pack(side=tk.LEFT, padx=5)
+    # btn_zoom_in = tk.Button(top_frame, text="放大", command=zoom_in)
+    # btn_zoom_in.pack(side=tk.LEFT, padx=5)
+    #
+    # btn_zoom_out = tk.Button(top_frame, text="缩小", command=zoom_out)
+    # btn_zoom_out.pack(side=tk.LEFT, padx=5)
 
     # 状态显示标签
     status_label = tk.Label(top_frame, text="", fg="blue")
@@ -258,9 +276,26 @@ if __name__ == "__main__":
     h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
     canvas.config(xscrollcommand=h_scroll.set)
 
+    bottom_frame = tk.Frame(canvas)
+    bottom_frame.pack(side=tk.BOTTOM)
+
+    btn_zoom_in = tk.Button(bottom_frame, text="放大", command=zoom_in)
+    btn_zoom_in.pack(side=tk.LEFT, padx=5)
+
     # 页码显示
-    page_label = tk.Label(canvas, text="")  # 先创建空文本
-    page_label.pack(side=tk.BOTTOM)
+    page_label = tk.Label(bottom_frame, text="")  # 先创建空文本
+    page_label.pack(side=tk.LEFT)
+
+    btn_zoom_out = tk.Button(bottom_frame, text="缩小", command=zoom_out)
+    btn_zoom_out.pack(side=tk.LEFT, padx=5)
+
+    # 绑定 Ctrl + 加号 和 Ctrl + 减号
+    root.bind("<Control-plus>", zoom_in)
+    root.bind("<Control-minus>", zoom_out)
+    root.bind("<Control-Key-equal>", zoom_in)  # 兼容部分键盘上 "+" 需要 Shift
+    canvas.bind("<MouseWheel>", on_mouse_wheel)  # Windows 和 Mac
+    canvas.bind("<Button-4>", lambda e: zoom_in() if e.state & 0x0004 else None)  # Linux（滚轮上）
+    canvas.bind("<Button-5>", lambda e: zoom_out() if e.state & 0x0004 else None)  # Linux（滚轮下）
 
     # 控件容器
     nav_frame = tk.Frame(main_frame)
@@ -270,7 +305,7 @@ if __name__ == "__main__":
     # 上一页按钮
     btn_prev = tk.Button(nav_frame, text="上一页", command=prev_page)
     btn_prev.pack(side=tk.LEFT, padx=10)
-    root.bind("<Left>", prev_page)  # 绑定左箭头键
+    root.bind("<Control-Left>", prev_page)  # 绑定左箭头键
 
     # 输入框和跳转按钮
     entry_page = tk.Entry(nav_frame, width=5)
@@ -282,7 +317,7 @@ if __name__ == "__main__":
     # 下一页按钮
     btn_next = tk.Button(nav_frame, text="下一页", command=next_page)
     btn_next.pack(side=tk.LEFT, padx=10)
-    root.bind("<Right>", next_page)  # 绑定右箭头键
+    root.bind("<Control-Right>", next_page)  # 绑定右箭头键
 
     # OCR 按钮
     btn_ocr = tk.Button(nav_frame, text="识别页面", command=ocr_current_page)
@@ -322,10 +357,16 @@ if __name__ == "__main__":
     btn_set_font.pack(side=tk.LEFT, padx=5)
     # 在文本框下方添加保存按钮
     btn_save = tk.Button(font_control_frame, text="保存文本", command=save_to_database)
-    btn_save.pack(side=tk.LEFT,padx=5,pady=5)
+    btn_save.pack(side=tk.LEFT, padx=5, pady=5)
     # 绑定 Ctrl + S 快捷键到保存功能
     root.bind("<Control-s>", lambda event: save_to_database())
     # 让 PanedWindow 在初始时平均分配宽度
     root.update_idletasks()  # 确保 UI 元素已经初始化
     # 运行主循环
     root.mainloop()
+
+    """待办：
+        2、右侧底部按钮栏，文本太多，按钮会挤掉，调整，把底部按纽栏放到一条水平线上，分栏显示
+        3、文本框焦点在后，无法点击 上一页，下一页；
+    
+    """

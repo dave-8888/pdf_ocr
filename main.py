@@ -11,14 +11,16 @@ import re
 doc = None
 current_page = 0  # 当前页索引
 resize_factor = 1  # 缩放比例
+rotation_angle = 0  # 旋转角度
 
 
 def load_pdf():
     """加载 PDF 文件"""
-    global doc, current_page
+    global doc, current_page, pdf_path
     file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
     if file_path:
         doc = fitz.open(file_path)
+        pdf_path = file_path
         current_page = 0
         update_image()
 
@@ -95,6 +97,35 @@ def go_to_page(event=None):
         pass  # 处理无效输入
 
 
+# 旋转页面
+def rotate_page():
+    global doc, current_page, rotation_angle
+    rotation_angle = (rotation_angle + 90) % 360  # 每次旋转 90 度
+    if rotation_angle == 0:
+        rotation_angle = 90
+    if doc is None or rotation_angle == 0:
+        return
+
+    page = doc[current_page]
+    # 直接旋转当前页
+    # new_angle = (page.rotation + rotation_angle) % 360  # 保持累积旋转
+    page.set_rotation(rotation_angle)
+    update_image()
+
+
+def save_pdf():
+    global doc, pdf_path  # 确保 pdf_path 存储了原 PDF 文件路径
+    if doc is None or not pdf_path:
+        return
+
+    # 直接覆盖原 PDF
+    if pdf_path:
+        doc.save(pdf_path,incremental=True, encryption=0)  # 不弹出对话框，直接保存
+        status_label.config(text="当前页旋转并保存成功！", fg="green")
+    else:
+        status_label.config(text="错误：无法覆盖原 PDF（未找到路径）", fg="red")
+
+
 def zoom_in(event=None):
     """放大 PDF 页面"""
     global resize_factor
@@ -111,7 +142,7 @@ def zoom_out(event=None):
 
 def ocr_current_page():
     """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
-    global current_page, text_box, doc
+    global current_page, text_box, doc, rotation_angle
     if doc is None:
         return
     # 清空文本框并显示状态信息
@@ -121,6 +152,7 @@ def ocr_current_page():
     page = doc[current_page]
     pix = page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+    img = img.rotate(rotation_angle, expand=True)  # 应用旋转角度
 
     # OCR 识别
     config = "--oem 1 --psm 3"
@@ -215,6 +247,8 @@ def on_mouse_wheel(event):
             zoom_out()
 
 
+
+
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
     root = tk.Tk()
@@ -232,6 +266,7 @@ if __name__ == "__main__":
     # 创建弹出菜单
     menu = tk.Menu(root, tearoff=0)
     menu.add_command(label="导入 PDF", command=load_pdf)
+    menu.add_command(label="保存 PDF", command=save_pdf)
 
     # 状态显示标签
     status_label = tk.Label(menu_frame, text="", fg="blue")
@@ -286,6 +321,8 @@ if __name__ == "__main__":
     btn_ocr = tk.Button(bottom_frame, text="识别页面", command=ocr_current_page)
     btn_ocr.pack(side=tk.LEFT, padx=10)
     root.bind("<Control-Return>", lambda event: ocr_current_page())
+    btn_rotate = tk.Button(bottom_frame, text="旋转", command=rotate_page)
+    btn_rotate.pack(side=tk.LEFT, padx=10)
 
     # 绑定 Ctrl + 加号 和 Ctrl + 减号
     root.bind("<Control-plus>", zoom_in)

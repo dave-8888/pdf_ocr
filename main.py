@@ -52,7 +52,8 @@ def update_image():
     canvas.create_image(0, 0, anchor="nw", image=photo)
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))
-    page_label.config(text=f"{current_page + 1} / {len(doc)}")
+    page_var.set(f"{current_page + 1}")
+    page_label.config(text=f"/ {len(doc)}")
     load_text_from_database()
 
 
@@ -224,6 +225,7 @@ def on_mouse_wheel(event):
         else:
             zoom_out()
 
+
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
     root = tk.Tk()
@@ -242,18 +244,8 @@ if __name__ == "__main__":
     menu = tk.Menu(root, tearoff=0)
     menu.add_command(label="导入 PDF", command=load_pdf)
 
-    # 顶部按钮栏
-    top_frame = tk.Frame(root)
-    top_frame.pack(fill=tk.X, pady=5)
-
-    # btn_zoom_in = tk.Button(top_frame, text="放大", command=zoom_in)
-    # btn_zoom_in.pack(side=tk.LEFT, padx=5)
-    #
-    # btn_zoom_out = tk.Button(top_frame, text="缩小", command=zoom_out)
-    # btn_zoom_out.pack(side=tk.LEFT, padx=5)
-
     # 状态显示标签
-    status_label = tk.Label(top_frame, text="", fg="blue")
+    status_label = tk.Label(menu_frame, text="", fg="blue")
     status_label.pack(side=tk.LEFT, padx=10)
     # 创建一个可调节的 PanedWindow
     paned_window = tk.PanedWindow(root, orient=tk.HORIZONTAL)
@@ -281,13 +273,30 @@ if __name__ == "__main__":
 
     btn_zoom_in = tk.Button(bottom_frame, text="放大", command=zoom_in)
     btn_zoom_in.pack(side=tk.LEFT, padx=5)
+    # 上一页按钮
+    btn_prev = tk.Button(bottom_frame, text="上一页", command=prev_page)
+    btn_prev.pack(side=tk.LEFT, padx=10)
+    root.bind("<Control-Left>", prev_page)  # 绑定左箭头键
 
+    # 输入框
+    page_var = tk.StringVar()  # 创建 StringVar 变量
+    entry_page = tk.Entry(bottom_frame, width=5, textvariable=page_var)
+    entry_page.pack(side=tk.LEFT, padx=5)
+    entry_page.bind("<Return>", go_to_page)  # 绑定回车键
     # 页码显示
     page_label = tk.Label(bottom_frame, text="")  # 先创建空文本
     page_label.pack(side=tk.LEFT)
+    # 下一页按钮
+    btn_next = tk.Button(bottom_frame, text="下一页", command=next_page)
+    btn_next.pack(side=tk.LEFT, padx=10)
+    root.bind("<Control-Right>", next_page)  # 绑定右箭头键
 
     btn_zoom_out = tk.Button(bottom_frame, text="缩小", command=zoom_out)
     btn_zoom_out.pack(side=tk.LEFT, padx=5)
+    # OCR 按钮
+    btn_ocr = tk.Button(bottom_frame, text="识别页面", command=ocr_current_page)
+    btn_ocr.pack(side=tk.LEFT, padx=10)
+    root.bind("<Control-Return>", lambda event: ocr_current_page())
 
     # 绑定 Ctrl + 加号 和 Ctrl + 减号
     root.bind("<Control-plus>", zoom_in)
@@ -297,32 +306,7 @@ if __name__ == "__main__":
     canvas.bind("<Button-4>", lambda e: zoom_in() if e.state & 0x0004 else None)  # Linux（滚轮上）
     canvas.bind("<Button-5>", lambda e: zoom_out() if e.state & 0x0004 else None)  # Linux（滚轮下）
 
-    # 控件容器
-    nav_frame = tk.Frame(main_frame)
-    # 让按钮栏固定在 main_frame 底部
-    nav_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10, anchor="s")
 
-    # 上一页按钮
-    btn_prev = tk.Button(nav_frame, text="上一页", command=prev_page)
-    btn_prev.pack(side=tk.LEFT, padx=10)
-    root.bind("<Control-Left>", prev_page)  # 绑定左箭头键
-
-    # 输入框和跳转按钮
-    entry_page = tk.Entry(nav_frame, width=5)
-    entry_page.pack(side=tk.LEFT, padx=5)
-    entry_page.bind("<Return>", go_to_page)  # 绑定回车键
-    btn_go = tk.Button(nav_frame, text="跳转", command=go_to_page)
-    btn_go.pack(side=tk.LEFT, padx=5)
-
-    # 下一页按钮
-    btn_next = tk.Button(nav_frame, text="下一页", command=next_page)
-    btn_next.pack(side=tk.LEFT, padx=10)
-    root.bind("<Control-Right>", next_page)  # 绑定右箭头键
-
-    # OCR 按钮
-    btn_ocr = tk.Button(nav_frame, text="识别页面", command=ocr_current_page)
-    btn_ocr.pack(side=tk.LEFT, padx=10)
-    root.bind("<Control-Return>", lambda event: ocr_current_page())
     # 创建右侧文本框
     text_frame = tk.Frame(paned_window, bg="lightblue")
     paned_window.add(text_frame, stretch="always")
@@ -335,8 +319,8 @@ if __name__ == "__main__":
     text_box.pack(fill=tk.BOTH, expand=True)
 
     # 控制字体大小的输入框和按钮
-    font_control_frame = tk.Frame(text_frame)
-    font_control_frame.pack(fill=tk.X, pady=5)
+    font_control_frame = tk.Frame(menu_frame)
+    font_control_frame.pack(side=tk.RIGHT)
 
     tk.Label(font_control_frame, text="字体:").pack(side=tk.LEFT, padx=5)
 
@@ -365,8 +349,3 @@ if __name__ == "__main__":
     # 运行主循环
     root.mainloop()
 
-    """待办：
-        2、右侧底部按钮栏，文本太多，按钮会挤掉，调整，把底部按纽栏放到一条水平线上，分栏显示
-        3、文本框焦点在后，无法点击 上一页，下一页；
-    
-    """

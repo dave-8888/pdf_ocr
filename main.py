@@ -109,16 +109,6 @@ def zoom_out(event=None):
     update_image()
 
 
-def preprocess_image(image):
-    """预处理图片，提高 OCR 识别效果"""
-    image = image.convert("L")  # 转灰度
-    image = image.filter(ImageFilter.MedianFilter())  # 降噪
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(2.0)  # 提高对比度
-    image = image.resize((image.width * 2, image.height * 2))  # 放大 2 倍
-    return image
-
-
 def ocr_current_page():
     """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
     global current_page, text_box, doc
@@ -131,7 +121,6 @@ def ocr_current_page():
     page = doc[current_page]
     pix = page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-    # img = preprocess_image(img)
 
     # OCR 识别
     config = "--oem 1 --psm 3"
@@ -306,7 +295,6 @@ if __name__ == "__main__":
     canvas.bind("<Button-4>", lambda e: zoom_in() if e.state & 0x0004 else None)  # Linux（滚轮上）
     canvas.bind("<Button-5>", lambda e: zoom_out() if e.state & 0x0004 else None)  # Linux（滚轮下）
 
-
     # 创建右侧文本框
     text_frame = tk.Frame(paned_window, bg="lightblue")
     paned_window.add(text_frame, stretch="always")
@@ -348,4 +336,3 @@ if __name__ == "__main__":
     root.update_idletasks()  # 确保 UI 元素已经初始化
     # 运行主循环
     root.mainloop()
-

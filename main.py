@@ -104,11 +104,26 @@ def go_to_page(event=None):
 
 
 # 旋转页面
-def rotate_page():
+def rotate_page_left():
     global doc, current_page, rotation_angle
     rotation_angle = (rotation_angle + 90) % 360  # 每次旋转 90 度
     if rotation_angle == 0:
-        rotation_angle = 90
+        rotation_angle = +90
+    if doc is None or rotation_angle == 0:
+        return
+
+    page = doc[current_page]
+    # 直接旋转当前页
+    # new_angle = (page.rotation + rotation_angle) % 360  # 保持累积旋转
+    page.set_rotation(rotation_angle)
+    update_image()
+
+
+def rotate_page_right():
+    global doc, current_page, rotation_angle
+    rotation_angle = (rotation_angle - 90) % 360  # 每次旋转 90 度
+    if rotation_angle == 0:
+        rotation_angle = -90
     if doc is None or rotation_angle == 0:
         return
 
@@ -271,6 +286,10 @@ def save_state():
 def on_closing():
     """窗口关闭时调用"""
     save_state()  # 先保存状态
+    global doc
+    if doc:  # 确保文件打开
+        doc.close()  # 关闭 PDF，释放资源
+        print("PDF 文件已安全关闭。")
     root.destroy()  # 关闭窗口
 
 
@@ -285,7 +304,9 @@ def load_state():
             state = json.load(f)
 
         pdf_path = state.get("pdf_path", "")
-        current_page = state.get("current_page", 0)
+        current_page = state.get("current_page", 1)
+        if not current_page:
+            current_page = 1
 
         if pdf_path and os.path.exists(pdf_path):
             doc = fitz.open(pdf_path)  # 重新打开 PDF
@@ -370,7 +391,7 @@ if __name__ == "__main__":
     btn_ocr = tk.Button(bottom_frame, text="识别页面", command=ocr_current_page)
     btn_ocr.pack(side=tk.LEFT, padx=10)
     root.bind("<Control-Return>", lambda event: ocr_current_page())
-    btn_rotate = tk.Button(bottom_frame, text="旋转", command=rotate_page)
+    btn_rotate = tk.Button(bottom_frame, text="旋转", command=rotate_page_left)
     btn_rotate.pack(side=tk.LEFT, padx=10)
 
     # 绑定 Ctrl + 加号 和 Ctrl + 减号
@@ -418,6 +439,10 @@ if __name__ == "__main__":
     btn_save.pack(side=tk.LEFT, padx=5, pady=5)
     # 绑定 Ctrl + S 快捷键到保存功能
     root.bind("<Control-s>", lambda event: save_to_database())
+    # 绑定 Ctrl + Shift +s 快捷保存 pdf
+    root.bind("<Control-Shift-S>",lambda event: save_pdf())
+    root.bind("<Control-Shift-Left>",lambda event: rotate_page_left())
+    root.bind("<Control-Shift-Right>",lambda event: rotate_page_right())
     # 绑定窗口关闭事件
     root.protocol("WM_DELETE_WINDOW", on_closing)
     # 让 PanedWindow 在初始时平均分配宽度

@@ -1,13 +1,13 @@
 import json
 import os
+import shutil
 import sqlite3
 import traceback
-from traceback import print_exc
 
 import fitz  # PyMuPDF
 import tkinter as tk
-from tkinter import filedialog, ttk, font
-from PIL import Image, ImageTk, ImageEnhance, ImageFilter
+from tkinter import filedialog, ttk
+from PIL import Image, ImageTk
 import pytesseract
 import re
 
@@ -298,16 +298,11 @@ def load_state():
     global pdf_path, current_page, doc
     if not os.path.exists(STATE_FILE):
         return
-
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             state = json.load(f)
-
         pdf_path = state.get("pdf_path", "")
-        current_page = state.get("current_page", 1)
-        if not current_page:
-            current_page = 1
-
+        current_page = state.get("current_page", 0)
         if pdf_path and os.path.exists(pdf_path):
             doc = fitz.open(pdf_path)  # 重新打开 PDF
             status_label.config(text=f"恢复上次文件: {pdf_path}", fg="blue")
@@ -317,6 +312,31 @@ def load_state():
     except Exception as e:
         traceback.print_exc()
         print(f"恢复状态失败: {e}")
+
+
+def reload_pdf():
+    """将当前 PDF 文件保存为同名文件并替换原文件，然后重新加载"""
+    global doc, pdf_path
+    if doc is None or not pdf_path:
+        return
+
+    try:
+        # 临时保存当前 PDF 为同名文件
+        temp_path = pdf_path + ".temp"
+        doc.save(temp_path)
+
+        # 删除原文件并重命名临时文件为原文件
+        shutil.move(temp_path, pdf_path)
+
+        # 关闭当前的 PDF
+        doc.close()
+
+        # 重新加载同名的 PDF 文件
+        doc = fitz.open(pdf_path)
+        status_label.config(text="PDF 已重新加载", fg="green")
+        update_image()
+    except Exception as e:
+        status_label.config(text=f"重新加载失败: {e}", fg="red")
 
 
 if __name__ == "__main__":
@@ -337,6 +357,7 @@ if __name__ == "__main__":
     menu = tk.Menu(root, tearoff=0)
     menu.add_command(label="导入 PDF", command=load_pdf)
     menu.add_command(label="保存 PDF", command=save_pdf)
+    menu.add_command(label="重新加载PDF", command=reload_pdf)
 
     # 状态显示标签
     status_label = tk.Label(menu_frame, text="", fg="blue")
@@ -440,9 +461,9 @@ if __name__ == "__main__":
     # 绑定 Ctrl + S 快捷键到保存功能
     root.bind("<Control-s>", lambda event: save_to_database())
     # 绑定 Ctrl + Shift +s 快捷保存 pdf
-    root.bind("<Control-Shift-S>",lambda event: save_pdf())
-    root.bind("<Control-Shift-Left>",lambda event: rotate_page_left())
-    root.bind("<Control-Shift-Right>",lambda event: rotate_page_right())
+    root.bind("<Control-Shift-S>", lambda event: save_pdf())
+    root.bind("<Control-Shift-Left>", lambda event: rotate_page_left())
+    root.bind("<Control-Shift-Right>", lambda event: rotate_page_right())
     # 绑定窗口关闭事件
     root.protocol("WM_DELETE_WINDOW", on_closing)
     # 让 PanedWindow 在初始时平均分配宽度

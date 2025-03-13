@@ -11,10 +11,10 @@ from PIL import Image, ImageTk
 import pytesseract
 import re
 
+from pdf_viewer import pdf_viewer
 # 加载 PDF 文档
 doc = None
-current_page = 0  # 当前页索引
-resize_factor = 1  # 缩放比例
+pdf_viewer.current_page = 0  # 当前页索引
 rotation_angle = 0  # 旋转角度
 # 状态文件路径
 STATE_FILE = "app_state.json"
@@ -22,21 +22,21 @@ STATE_FILE = "app_state.json"
 
 def load_pdf():
     """加载 PDF 文件"""
-    global doc, current_page, pdf_path
+    global doc, pdf_path
     file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
     if file_path:
         doc = fitz.open(file_path)
         pdf_path = file_path
-        current_page = 0
+        pdf_viewer.current_page = 0
         update_image()
 
 
 def update_image():
     """更新显示的 PDF 页面"""
-    global page_label, doc, resize_factor
+    global page_label, doc
     if doc is None:
         return
-    page = doc[current_page]
+    page = doc[pdf_viewer.current_page]
     pix = page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     # 计算窗口高度的 80%
@@ -46,8 +46,8 @@ def update_image():
     # 按比例调整宽度
     display_width = int(display_height * aspect_ratio)
     # 进行缩放
-    new_width = int(display_width * resize_factor)
-    new_height = int(display_height * resize_factor)
+    new_width = int(display_width * pdf_viewer.resize_factor)
+    new_height = int(display_height * pdf_viewer.resize_factor)
     window_width = root.winfo_width()
     paned_w_width = new_width + 10
     if paned_w_width > window_width / 2:
@@ -60,7 +60,7 @@ def update_image():
     canvas.create_image(0, 0, anchor="nw", image=photo)
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))
-    page_var.set(f"{current_page + 1}")
+    page_var.set(f"{pdf_viewer.current_page + 1}")
     page_label.config(text=f"/ {len(doc)}")
     load_text_from_database()
 
@@ -68,36 +68,33 @@ def update_image():
 def next_page(event=None):
     """显示下一页"""
     # if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
-    #     global current_page
-    #     if doc and current_page < len(doc) - 1:
-    #         current_page += 1
+    #     global pdf_viewer.current_page
+    #     if doc and pdf_viewer.current_page < len(doc) - 1:
+    #         pdf_viewer.current_page += 1
     #         update_image()
-    global current_page
-    if doc and current_page < len(doc) - 1:
-        current_page += 1
+    if doc and pdf_viewer.current_page < len(doc) - 1:
+        pdf_viewer.current_page += 1
         update_image()
 
 
 def prev_page(event=None):
     """显示上一页"""
     # if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
-    #     global current_page
-    #     if doc and current_page > 0:
-    #         current_page -= 1
+    #     global pdf_viewer.current_page
+    #     if doc and pdf_viewer.current_page > 0:
+    #         pdf_viewer.current_page -= 1
     #         update_image()
-    global current_page
-    if doc and current_page > 0:
-        current_page -= 1
+    if doc and pdf_viewer.current_page > 0:
+        pdf_viewer.current_page -= 1
         update_image()
 
 
 def go_to_page(event=None):
     """跳转到指定页码"""
-    global current_page
     try:
         page_num = int(entry_page.get()) - 1  # 用户输入的是从 1 开始的页码
         if doc and 0 <= page_num < len(doc):
-            current_page = page_num
+            pdf_viewer.current_page = page_num
             update_image()
     except ValueError:
         pass  # 处理无效输入
@@ -105,14 +102,14 @@ def go_to_page(event=None):
 
 # 旋转页面
 def rotate_page_left():
-    global doc, current_page, rotation_angle
+    global doc, rotation_angle
     rotation_angle = (rotation_angle + 90) % 360  # 每次旋转 90 度
     if rotation_angle == 0:
         rotation_angle = +90
     if doc is None or rotation_angle == 0:
         return
 
-    page = doc[current_page]
+    page = doc[pdf_viewer.current_page]
     # 直接旋转当前页
     # new_angle = (page.rotation + rotation_angle) % 360  # 保持累积旋转
     page.set_rotation(rotation_angle)
@@ -120,14 +117,14 @@ def rotate_page_left():
 
 
 def rotate_page_right():
-    global doc, current_page, rotation_angle
+    global doc,  rotation_angle
     rotation_angle = (rotation_angle - 90) % 360  # 每次旋转 90 度
     if rotation_angle == 0:
         rotation_angle = -90
     if doc is None or rotation_angle == 0:
         return
 
-    page = doc[current_page]
+    page = doc[pdf_viewer.current_page]
     # 直接旋转当前页
     # new_angle = (page.rotation + rotation_angle) % 360  # 保持累积旋转
     page.set_rotation(rotation_angle)
@@ -149,28 +146,26 @@ def save_pdf():
 
 def zoom_in(event=None):
     """放大 PDF 页面"""
-    global resize_factor
-    resize_factor *= 1.1
+    pdf_viewer.resize_factor *= 1.1
     update_image()
 
 
 def zoom_out(event=None):
     """缩小 PDF 页面"""
-    global resize_factor
-    resize_factor /= 1.1
+    pdf_viewer.resize_factor /= 1.1
     update_image()
 
 
 def ocr_current_page():
     """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
-    global current_page, text_box, doc, rotation_angle
+    global  text_box, doc, rotation_angle
     if doc is None:
         return
     # 清空文本框并显示状态信息
     text_box.delete(1.0, tk.END)
     status_label.config(text="正在识别，请稍候...", fg="blue")
     root.update_idletasks()
-    page = doc[current_page]
+    page = doc[pdf_viewer.current_page]
     pix = page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     img = img.rotate(rotation_angle, expand=True)  # 应用旋转角度
@@ -225,7 +220,7 @@ def save_to_database():
             INSERT INTO ocr_data (filename, page, text)
             VALUES (?, ?, ?)
             ON CONFLICT(filename, page) DO UPDATE SET text = excluded.text
-        """, (filename, current_page + 1, text))
+        """, (filename, pdf_viewer.current_page + 1, text))
         conn.commit()
         conn.close()
         status_label.config(text="OCR 结果已保存或更新！", fg="green")
@@ -235,14 +230,14 @@ def save_to_database():
 
 def load_text_from_database():
     """根据当前文件名和页码，从数据库中加载 OCR 识别的文本并显示"""
-    global doc, text_box, current_page
+    global doc, text_box
     if doc is None:
         return
     try:
         conn = sqlite3.connect("ocr_results.db")
         cursor = conn.cursor()
         filename = doc.name if doc else "Unknown"
-        cursor.execute("SELECT text FROM ocr_data WHERE filename = ? AND page = ?", (filename, current_page + 1))
+        cursor.execute("SELECT text FROM ocr_data WHERE filename = ? AND page = ?", (filename, pdf_viewer.current_page + 1))
         result = cursor.fetchone()
         conn.close()
         text_box.delete(1.0, tk.END)  # 清空文本框
@@ -270,13 +265,13 @@ def on_mouse_wheel(event):
 
 def save_state():
     """保存当前文件路径和页面状态"""
-    global pdf_path, current_page
+    global pdf_path
     if not pdf_path:
         return
 
     state = {
         "pdf_path": pdf_path,
-        "current_page": current_page
+        "pdf_viewer.current_page": pdf_viewer.current_page
     }
 
     with open(STATE_FILE, "w", encoding="utf-8") as f:
@@ -295,14 +290,14 @@ def on_closing():
 
 def load_state():
     """加载上次的 PDF 文件路径和页面"""
-    global pdf_path, current_page, doc
+    global pdf_path, doc
     if not os.path.exists(STATE_FILE):
         return
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             state = json.load(f)
         pdf_path = state.get("pdf_path", "")
-        current_page = state.get("current_page", 0)
+        pdf_viewer.current_page = state.get("pdf_viewer.current_page", 0)
         if pdf_path and os.path.exists(pdf_path):
             doc = fitz.open(pdf_path)  # 重新打开 PDF
             status_label.config(text=f"恢复上次文件: {pdf_path}", fg="blue")

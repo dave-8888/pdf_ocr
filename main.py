@@ -11,11 +11,9 @@ from PIL import Image, ImageTk
 import pytesseract
 import re
 
-from pdf_viewer import pdf_viewer
+from pdf_viewer import pdf_viewer,page_viewer
 # 加载 PDF 文档
 doc = None
-pdf_viewer.current_page = 0  # 当前页索引
-rotation_angle = 0  # 旋转角度
 # 状态文件路径
 STATE_FILE = "app_state.json"
 
@@ -36,8 +34,8 @@ def update_image():
     global page_label, doc
     if doc is None:
         return
-    page = doc[pdf_viewer.current_page]
-    pix = page.get_pixmap()
+    page_viewer.page = doc[pdf_viewer.current_page]
+    pix = page_viewer.page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     # 计算窗口高度的 80%
     window_height = root.winfo_height()  # 获取窗口当前高度
@@ -102,32 +100,32 @@ def go_to_page(event=None):
 
 # 旋转页面
 def rotate_page_left():
-    global doc, rotation_angle
-    rotation_angle = (rotation_angle + 90) % 360  # 每次旋转 90 度
-    if rotation_angle == 0:
-        rotation_angle = +90
-    if doc is None or rotation_angle == 0:
+    global doc
+    page_viewer.rotation_angle = (page_viewer.rotation_angle + 90) % 360  # 每次旋转 90 度
+    if page_viewer.rotation_angle == 0:
+        page_viewer.rotation_angle = +90
+    if doc is None or page_viewer.rotation_angle == 0:
         return
 
-    page = doc[pdf_viewer.current_page]
+    page_viewer.page = doc[pdf_viewer.current_page]
     # 直接旋转当前页
-    # new_angle = (page.rotation + rotation_angle) % 360  # 保持累积旋转
-    page.set_rotation(rotation_angle)
+    # new_angle = (page_viewer.page.rotation + page_viewer.rotation_angle) % 360  # 保持累积旋转
+    page_viewer.page.set_rotation(page_viewer.rotation_angle)
     update_image()
 
 
 def rotate_page_right():
-    global doc,  rotation_angle
-    rotation_angle = (rotation_angle - 90) % 360  # 每次旋转 90 度
-    if rotation_angle == 0:
-        rotation_angle = -90
-    if doc is None or rotation_angle == 0:
+    global doc
+    page_viewer.rotation_angle = (page_viewer.rotation_angle - 90) % 360  # 每次旋转 90 度
+    if page_viewer.rotation_angle == 0:
+        page_viewer.rotation_angle = -90
+    if doc is None or page_viewer.rotation_angle == 0:
         return
 
-    page = doc[pdf_viewer.current_page]
+    page_viewer.page = doc[pdf_viewer.current_page]
     # 直接旋转当前页
-    # new_angle = (page.rotation + rotation_angle) % 360  # 保持累积旋转
-    page.set_rotation(rotation_angle)
+    # new_angle = (page_viewer.page.rotation + page_viewer.rotation_angle) % 360  # 保持累积旋转
+    page_viewer.page.set_rotation(page_viewer.rotation_angle)
     update_image()
 
 
@@ -158,17 +156,17 @@ def zoom_out(event=None):
 
 def ocr_current_page():
     """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
-    global  text_box, doc, rotation_angle
+    global  text_box, doc
     if doc is None:
         return
     # 清空文本框并显示状态信息
     text_box.delete(1.0, tk.END)
     status_label.config(text="正在识别，请稍候...", fg="blue")
     root.update_idletasks()
-    page = doc[pdf_viewer.current_page]
-    pix = page.get_pixmap()
+    page_viewer.page = doc[pdf_viewer.current_page]
+    pix = page_viewer.page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-    img = img.rotate(rotation_angle, expand=True)  # 应用旋转角度
+    img = img.rotate(page_viewer.rotation_angle, expand=True)  # 应用旋转角度
 
     # OCR 识别
     config = "--oem 1 --psm 3"

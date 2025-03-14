@@ -437,6 +437,8 @@ if __name__ == "__main__":
     text_box = scrolledtext.ScrolledText(text_frame, wrap=tk.WORD, width=50, height=30, font=text_font)
     text_box.configure(bg="#F5F5D5", fg="blue")
     text_box.pack(fill=tk.BOTH, expand=True)
+    # 启用撤销和恢复
+    text_box.config(undo=True)
 
     # 控制字体大小的输入框和按钮
     font_control_frame = tk.Frame(menu_frame)

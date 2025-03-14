@@ -10,6 +10,7 @@ from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import pytesseract
 import re
+from tkinter import scrolledtext
 
 from pymupdf.mupdf import pdf_annot_pop_and_discard_local_xref
 
@@ -433,7 +434,7 @@ if __name__ == "__main__":
     # 默认字体
     default_font = "微软雅黑"
     text_font = (default_font, 12)  # 初始字体大小 12
-    text_box = tk.Text(text_frame, wrap=tk.WORD, width=50, height=30, font=text_font)
+    text_box = scrolledtext.ScrolledText(text_frame, wrap=tk.WORD, width=50, height=30, font=text_font)
     text_box.configure(bg="#F5F5D5", fg="blue")
     text_box.pack(fill=tk.BOTH, expand=True)
 
@@ -442,8 +443,6 @@ if __name__ == "__main__":
     font_control_frame.pack(side=tk.RIGHT)
 
     tk.Label(font_control_frame,text="OCR引擎模式").pack(side=tk.LEFT,padx=5)
-    # 变量存储选项
-    # ocr_cf_oem = tk.IntVar(value=ocr_cf.oem)  # 默认使用模式 3
     # 创建下拉框
     # OCR 引擎模式选项（带描述）
     engine_options = {
@@ -452,10 +451,10 @@ if __name__ == "__main__":
         2: "结合传统OCR和LSTM",
         3: "自动选择最佳 OCR 引擎"
     }
+    # 变量存储选项
     ocr_cf_oem = tk.StringVar(value=engine_options[ocr_cf.oem])  # 默认选择模式 3
-    engine_dropdown = ttk.Combobox(font_control_frame, textvariable=ocr_cf_oem, values=list(engine_options.values()),
-                                   state="readonly")
-
+    engine_dropdown = ttk.Combobox(font_control_frame, textvariable=ocr_cf_oem,
+                                   values=list(engine_options.values()),state="readonly")
     engine_dropdown.pack(side=tk.LEFT, padx=5)
     # 绑定事件
     engine_dropdown.bind("<<ComboboxSelected>>", update_engine_mode)

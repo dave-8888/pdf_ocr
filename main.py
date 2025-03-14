@@ -11,6 +11,9 @@ from PIL import Image, ImageTk
 import pytesseract
 import re
 
+from pymupdf.mupdf import pdf_annot_pop_and_discard_local_xref
+
+from ocr_config import ocr_cf
 from pdf_viewer import pdf_viewer,page_viewer
 # 加载 PDF 文档
 doc = None
@@ -169,7 +172,7 @@ def ocr_current_page():
     img = img.rotate(page_viewer.rotation_angle, expand=True)  # 应用旋转角度
 
     # OCR 识别
-    config = "--oem 1 --psm 3"
+    config = f"--oem {ocr_cf.oem} --psm {ocr_cf.psm}"
     text = pytesseract.image_to_string(img, lang='chi_sim+eng', config=config)
     text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)  # 去除中文字符间的空格
 
@@ -188,6 +191,13 @@ def change_font(event=None):
         text_box.config(font=(new_font, new_size))  # 设置新的字体大小
     except ValueError:
         status_label.config(text="请输入有效的数字", fg="red")  # 错误提示
+
+# 事件处理函数
+def update_engine_mode(event):
+    selected_mode = engine_dropdown.get()
+    selected_oem = [key for key, value in engine_options.items() if value == selected_mode][0]
+    ocr_cf.oem = selected_oem
+    status_label.config(text=f"OCR 引擎模式已修改为: {selected_mode}", fg="green")  # 错误提示
 
 
 def focus_canvas(event):
@@ -431,8 +441,26 @@ if __name__ == "__main__":
     font_control_frame = tk.Frame(menu_frame)
     font_control_frame.pack(side=tk.RIGHT)
 
-    tk.Label(font_control_frame, text="字体:").pack(side=tk.LEFT, padx=5)
+    tk.Label(font_control_frame,text="OCR引擎模式").pack(side=tk.LEFT,padx=5)
+    # 变量存储选项
+    # ocr_cf_oem = tk.IntVar(value=ocr_cf.oem)  # 默认使用模式 3
+    # 创建下拉框
+    # OCR 引擎模式选项（带描述）
+    engine_options = {
+        0: "传统OCR引擎",
+        1: "LSTM OCR引擎",
+        2: "结合传统OCR和LSTM",
+        3: "自动选择最佳 OCR 引擎"
+    }
+    ocr_cf_oem = tk.StringVar(value=engine_options[ocr_cf.oem])  # 默认选择模式 3
+    engine_dropdown = ttk.Combobox(font_control_frame, textvariable=ocr_cf_oem, values=list(engine_options.values()),
+                                   state="readonly")
 
+    engine_dropdown.pack(side=tk.LEFT, padx=5)
+    # 绑定事件
+    engine_dropdown.bind("<<ComboboxSelected>>", update_engine_mode)
+
+    tk.Label(font_control_frame, text="字体:").pack(side=tk.LEFT, padx=5)
     font_var = tk.StringVar(value=default_font)
     font_options = ["宋体", "黑体", "楷体", "微软雅黑", "仿宋", "Arial", "Times New Roman", "Courier", "Verdana"]
     font_dropdown = ttk.Combobox(font_control_frame, textvariable=font_var, values=font_options, state="readonly")

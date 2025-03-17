@@ -17,28 +17,27 @@ from pymupdf.mupdf import pdf_annot_pop_and_discard_local_xref
 from ocr_config import ocr_cf
 from pdf_viewer import pdf_viewer,page_viewer
 # 加载 PDF 文档
-doc = None
+pdf_viewer.doc = None
 # 状态文件路径
 STATE_FILE = "app_state.json"
 
 
 def load_pdf():
     """加载 PDF 文件"""
-    global doc, pdf_path
     file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
     if file_path:
-        doc = fitz.open(file_path)
-        pdf_path = file_path
+        pdf_viewer.doc = fitz.open(file_path)
+        pdf_viewer.pdf_path = file_path
         pdf_viewer.current_page = 0
         update_image()
 
 
 def update_image():
     """更新显示的 PDF 页面"""
-    global page_label, doc
-    if doc is None:
+    global page_label
+    if pdf_viewer.doc is None:
         return
-    page_viewer.page = doc[pdf_viewer.current_page]
+    page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
     pix = page_viewer.page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     # 计算窗口高度的 80%
@@ -63,30 +62,20 @@ def update_image():
     canvas.image = photo
     canvas.config(scrollregion=canvas.bbox("all"))
     page_var.set(f"{pdf_viewer.current_page + 1}")
-    page_label.config(text=f"/ {len(doc)}")
+    page_label.config(text=f"/ {len(pdf_viewer.doc)}")
     load_text_from_database()
 
 
 def next_page(event=None):
     """显示下一页"""
-    # if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
-    #     global pdf_viewer.current_page
-    #     if doc and pdf_viewer.current_page < len(doc) - 1:
-    #         pdf_viewer.current_page += 1
-    #         update_image()
-    if doc and pdf_viewer.current_page < len(doc) - 1:
+    if pdf_viewer.doc and pdf_viewer.current_page < len(pdf_viewer.doc) - 1:
         pdf_viewer.current_page += 1
         update_image()
 
 
 def prev_page(event=None):
     """显示上一页"""
-    # if root.focus_get() not in [entry_page, text_box]:  # 仅在非输入框时生效
-    #     global pdf_viewer.current_page
-    #     if doc and pdf_viewer.current_page > 0:
-    #         pdf_viewer.current_page -= 1
-    #         update_image()
-    if doc and pdf_viewer.current_page > 0:
+    if pdf_viewer.doc and pdf_viewer.current_page > 0:
         pdf_viewer.current_page -= 1
         update_image()
 
@@ -95,7 +84,7 @@ def go_to_page(event=None):
     """跳转到指定页码"""
     try:
         page_num = int(entry_page.get()) - 1  # 用户输入的是从 1 开始的页码
-        if doc and 0 <= page_num < len(doc):
+        if pdf_viewer.doc and 0 <= page_num < len(pdf_viewer.doc):
             pdf_viewer.current_page = page_num
             update_image()
     except ValueError:
@@ -104,14 +93,13 @@ def go_to_page(event=None):
 
 # 旋转页面
 def rotate_page_left():
-    global doc
     page_viewer.rotation_angle = (page_viewer.rotation_angle + 90) % 360  # 每次旋转 90 度
     if page_viewer.rotation_angle == 0:
         page_viewer.rotation_angle = +90
-    if doc is None or page_viewer.rotation_angle == 0:
+    if pdf_viewer.doc is None or page_viewer.rotation_angle == 0:
         return
 
-    page_viewer.page = doc[pdf_viewer.current_page]
+    page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
     # 直接旋转当前页
     # new_angle = (page_viewer.page.rotation + page_viewer.rotation_angle) % 360  # 保持累积旋转
     page_viewer.page.set_rotation(page_viewer.rotation_angle)
@@ -119,14 +107,13 @@ def rotate_page_left():
 
 
 def rotate_page_right():
-    global doc
     page_viewer.rotation_angle = (page_viewer.rotation_angle - 90) % 360  # 每次旋转 90 度
     if page_viewer.rotation_angle == 0:
         page_viewer.rotation_angle = -90
-    if doc is None or page_viewer.rotation_angle == 0:
+    if pdf_viewer.doc is None or page_viewer.rotation_angle == 0:
         return
 
-    page_viewer.page = doc[pdf_viewer.current_page]
+    page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
     # 直接旋转当前页
     # new_angle = (page_viewer.page.rotation + page_viewer.rotation_angle) % 360  # 保持累积旋转
     page_viewer.page.set_rotation(page_viewer.rotation_angle)
@@ -134,16 +121,19 @@ def rotate_page_right():
 
 
 def save_pdf():
-    global doc, pdf_path  # 确保 pdf_path 存储了原 PDF 文件路径
-    if doc is None or not pdf_path:
-        return
-
-    # 直接覆盖原 PDF
-    if pdf_path:
-        doc.save(pdf_path, incremental=True, encryption=0)  # 不弹出对话框，直接保存
-        status_label.config(text="当前页旋转并保存成功！", fg="green")
-    else:
-        status_label.config(text="错误：无法覆盖原 PDF（未找到路径）", fg="red")
+    try:
+         # 确保 pdf_viewer.pdf_path 存储了原 PDF 文件路径
+        if pdf_viewer.doc is None or not pdf_viewer.pdf_path:
+            return
+        # 直接覆盖原 PDF
+        if pdf_viewer.pdf_path:
+            pdf_viewer.doc.save(pdf_viewer.pdf_path, incremental=True, encryption=0)  # 不弹出对话框，直接保存
+            status_label.config(text="当前页旋转并保存成功！", fg="green")
+        else:
+            status_label.config(text="错误：无法覆盖原 PDF（未找到路径）", fg="red")
+    except Exception as e:
+        traceback.print_exc()
+        status_label.config(text='错误,保存PDF操作错误',fg="red")
 
 
 def zoom_in(event=None):
@@ -160,14 +150,14 @@ def zoom_out(event=None):
 
 def ocr_current_page():
     """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
-    global  text_box, doc
-    if doc is None:
+    global  text_box
+    if pdf_viewer.doc is None:
         return
     # 清空文本框并显示状态信息
     text_box.delete(1.0, tk.END)
     status_label.config(text="正在识别，请稍候...", fg="blue")
     root.update_idletasks()
-    page_viewer.page = doc[pdf_viewer.current_page]
+    page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
     pix = page_viewer.page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     img = img.rotate(page_viewer.rotation_angle, expand=True)  # 应用旋转角度
@@ -207,7 +197,6 @@ def focus_canvas(event):
 
 def save_to_database():
     """将 OCR 识别的文本保存到 SQLite 数据库"""
-    global doc
     text = text_box.get(1.0, tk.END).strip()
     if not text:
         status_label.config(text="没有可保存的文本！", fg="red")
@@ -224,7 +213,7 @@ def save_to_database():
                 UNIQUE(filename, page)  -- 确保 filename 和 page 组合是唯一的
             )
         """)
-        filename = doc.name if doc else "Unknown"
+        filename = pdf_viewer.doc.name if pdf_viewer.doc else "Unknown"
         cursor.execute("""
             INSERT INTO ocr_data (filename, page, text)
             VALUES (?, ?, ?)
@@ -239,13 +228,13 @@ def save_to_database():
 
 def load_text_from_database():
     """根据当前文件名和页码，从数据库中加载 OCR 识别的文本并显示"""
-    global doc, text_box
-    if doc is None:
+    global  text_box
+    if pdf_viewer.doc is None:
         return
     try:
         conn = sqlite3.connect("ocr_results.db")
         cursor = conn.cursor()
-        filename = doc.name if doc else "Unknown"
+        filename = pdf_viewer.doc.name if pdf_viewer.doc else "Unknown"
         cursor.execute("SELECT text FROM ocr_data WHERE filename = ? AND page = ?", (filename, pdf_viewer.current_page + 1))
         result = cursor.fetchone()
         conn.close()
@@ -274,13 +263,12 @@ def on_mouse_wheel(event):
 
 def save_state():
     """保存当前文件路径和页面状态"""
-    global pdf_path
-    if not pdf_path:
+    if not pdf_viewer.pdf_path:
         return
 
     state = {
-        "pdf_path": pdf_path,
-        "pdf_viewer.current_page": pdf_viewer.current_page
+        "pdf_path": pdf_viewer.pdf_path,
+        "current_page": pdf_viewer.current_page
     }
 
     with open(STATE_FILE, "w", encoding="utf-8") as f:
@@ -290,29 +278,27 @@ def save_state():
 def on_closing():
     """窗口关闭时调用"""
     save_state()  # 先保存状态
-    global doc
-    if doc:  # 确保文件打开
-        doc.close()  # 关闭 PDF，释放资源
+    if pdf_viewer.doc:  # 确保文件打开
+        pdf_viewer.doc.close()  # 关闭 PDF，释放资源
         print("PDF 文件已安全关闭。")
     root.destroy()  # 关闭窗口
 
 
 def load_state():
     """加载上次的 PDF 文件路径和页面"""
-    global pdf_path, doc
     if not os.path.exists(STATE_FILE):
         return
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             state = json.load(f)
-        pdf_path = state.get("pdf_path", "")
-        pdf_viewer.current_page = state.get("pdf_viewer.current_page", 0)
-        if pdf_path and os.path.exists(pdf_path):
-            doc = fitz.open(pdf_path)  # 重新打开 PDF
-            status_label.config(text=f"恢复上次文件: {pdf_path}", fg="blue")
+        pdf_viewer.pdf_path = state.get("pdf_path", "")
+        pdf_viewer.current_page = state.get("current_page", 0)
+        if pdf_viewer.pdf_path and os.path.exists(pdf_viewer.pdf_path):
+            pdf_viewer.doc = fitz.open(pdf_viewer.pdf_path)  # 重新打开 PDF
+            status_label.config(text=f"恢复上次文件: {pdf_viewer.pdf_path}", fg="blue")
             update_image()
         else:
-            pdf_path = ""  # 避免无效路径
+            pdf_viewer.pdf_path = ""  # 避免无效路径
     except Exception as e:
         traceback.print_exc()
         print(f"恢复状态失败: {e}")
@@ -320,23 +306,22 @@ def load_state():
 
 def reload_pdf():
     """将当前 PDF 文件保存为同名文件并替换原文件，然后重新加载"""
-    global doc, pdf_path
-    if doc is None or not pdf_path:
+    if pdf_viewer.doc is None or not pdf_viewer.pdf_path:
         return
 
     try:
         # 临时保存当前 PDF 为同名文件
-        temp_path = pdf_path + ".temp"
-        doc.save(temp_path)
+        temp_path = pdf_viewer.pdf_path + ".temp"
+        pdf_viewer.doc.save(temp_path)
 
         # 删除原文件并重命名临时文件为原文件
-        shutil.move(temp_path, pdf_path)
+        shutil.move(temp_path, pdf_viewer.pdf_path)
 
         # 关闭当前的 PDF
-        doc.close()
+        pdf_viewer.doc.close()
 
         # 重新加载同名的 PDF 文件
-        doc = fitz.open(pdf_path)
+        pdf_viewer.doc = fitz.open(pdf_viewer.pdf_path)
         status_label.config(text="PDF 已重新加载", fg="green")
         update_image()
     except Exception as e:

@@ -28,3 +28,6 @@ ctrl - s ：保存右侧文本内容  <br>
 ## 其他
 ### 导出配置文件
 pip list --format=freeze > requirements.txt
+
+### 如果对你有帮助，请我喝瓶可乐
+![img_2.png](sources/img_2.png)

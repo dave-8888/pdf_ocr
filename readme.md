@@ -10,6 +10,20 @@
 ### 安装依赖包
  pip install -r requirements.txt
  
+## 程序预览
+![img_1.png](sources/img_1.png)
+
+## 快捷键说明：
+ctrl - ➕ ：pdf 放大  <br>
+ctrl - ➖ ：pdf 缩小  <br>
+ctrl - 鼠标滚轮 ：pdf放大或缩小  <br>
+ctrl - ←   ：pdf上一页  <br>
+ctrl - →   ：pdf下一页  <br>
+ctrl - shift - ←   ：当前pdf图片 左旋转90度  <br>
+ctrl - shift - →   ：当前pdf图片 右旋转90度  <br>
+ctrl - shift - S    ：保存修改后的pdf文件  <br>
+ctrl - enter ：识别当前图片内容  <br>
+ctrl - s ：保存右侧文本内容  <br>
 
 ## 其他
 ### 导出配置文件

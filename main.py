@@ -12,14 +12,12 @@ import pytesseract
 import re
 from tkinter import scrolledtext
 
-from pymupdf.mupdf import pdf_annot_pop_and_discard_local_xref
-
-from ocr_config import ocr_cf
-from pdf_viewer import pdf_viewer,page_viewer
+from classes.ocr_config import ocr_cf
+from classes.pdf_viewer import pdf_viewer,page_viewer
 # 加载 PDF 文档
 pdf_viewer.doc = None
 # 状态文件路径
-STATE_FILE = "app_state.json"
+STATE_FILE = "cache_data/app_state.json"
 
 
 def load_pdf():
@@ -202,7 +200,7 @@ def save_to_database():
         status_label.config(text="没有可保存的文本！", fg="red")
         return
     try:
-        conn = sqlite3.connect("ocr_results.db")
+        conn = sqlite3.connect("sources/ocr_results.db")
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS ocr_data (
@@ -232,7 +230,7 @@ def load_text_from_database():
     if pdf_viewer.doc is None:
         return
     try:
-        conn = sqlite3.connect("ocr_results.db")
+        conn = sqlite3.connect("sources/ocr_results.db")
         cursor = conn.cursor()
         filename = pdf_viewer.doc.name if pdf_viewer.doc else "Unknown"
         cursor.execute("SELECT text FROM ocr_data WHERE filename = ? AND page = ?", (filename, pdf_viewer.current_page + 1))

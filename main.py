@@ -89,34 +89,21 @@ def go_to_page(event=None):
         pass  # 处理无效输入
 
 
-# 旋转页面
-def rotate_page_left():
-    page_viewer.rotation_angle = (page_viewer.rotation_angle + 90) % 360  # 每次旋转 90 度
-    if page_viewer.rotation_angle == 0:
-        page_viewer.rotation_angle = +90
-    if pdf_viewer.doc is None or page_viewer.rotation_angle == 0:
-        return
 
-    page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
-    # 直接旋转当前页
-    # new_angle = (page_viewer.page.rotation + page_viewer.rotation_angle) % 360  # 保持累积旋转
-    page_viewer.page.set_rotation(page_viewer.rotation_angle)
+
+# 逆时针旋转
+def rotate_page_anti():
+    if pdf_viewer.doc is None:
+        return
+    page_viewer.page.set_rotation(page_viewer.page.rotation + 270 )
     update_image()
 
-
-def rotate_page_right():
-    page_viewer.rotation_angle = (page_viewer.rotation_angle - 90) % 360  # 每次旋转 90 度
-    if page_viewer.rotation_angle == 0:
-        page_viewer.rotation_angle = -90
-    if pdf_viewer.doc is None or page_viewer.rotation_angle == 0:
+# 顺时针旋转页面
+def rotate_page_cw():
+    if pdf_viewer.doc is None:
         return
-
-    page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
-    # 直接旋转当前页
-    # new_angle = (page_viewer.page.rotation + page_viewer.rotation_angle) % 360  # 保持累积旋转
-    page_viewer.page.set_rotation(page_viewer.rotation_angle)
+    page_viewer.page.set_rotation(page_viewer.page.rotation + 90)
     update_image()
-
 
 def save_pdf():
     try:
@@ -158,7 +145,7 @@ def ocr_current_page():
     page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
     pix = page_viewer.page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-    img = img.rotate(page_viewer.rotation_angle, expand=True)  # 应用旋转角度
+    img = img.rotate(page_viewer.page.rotation, expand=True)  # 应用旋转角度
 
     # OCR 识别
     config = f"--oem {ocr_cf.oem} --psm {ocr_cf.psm}"
@@ -399,7 +386,7 @@ if __name__ == "__main__":
     btn_ocr = tk.Button(bottom_frame, text="识别页面", command=ocr_current_page)
     btn_ocr.pack(side=tk.LEFT, padx=10)
     root.bind("<Control-Return>", lambda event: ocr_current_page())
-    btn_rotate = tk.Button(bottom_frame, text="旋转", command=rotate_page_left)
+    btn_rotate = tk.Button(bottom_frame, text="旋转(顺)", command=rotate_page_cw)
     btn_rotate.pack(side=tk.LEFT, padx=10)
 
     # 绑定 Ctrl + 加号 和 Ctrl + 减号
@@ -467,8 +454,8 @@ if __name__ == "__main__":
     root.bind("<Control-s>", lambda event: save_to_database())
     # 绑定 Ctrl + Shift +s 快捷保存 pdf
     root.bind("<Control-Shift-S>", lambda event: save_pdf())
-    root.bind("<Control-Shift-Left>", lambda event: rotate_page_left())
-    root.bind("<Control-Shift-Right>", lambda event: rotate_page_right())
+    root.bind("<Control-Shift-Left>", lambda event: rotate_page_anti())
+    root.bind("<Control-Shift-Right>", lambda event: rotate_page_cw())
     # 绑定窗口关闭事件
     root.protocol("WM_DELETE_WINDOW", on_closing)
     # 让 PanedWindow 在初始时平均分配宽度

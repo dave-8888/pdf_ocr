@@ -148,7 +148,7 @@ def ocr_current_page():
     img = img.rotate(page_viewer.page.rotation, expand=True)  # 应用旋转角度
 
     # OCR 识别
-    config = f"--oem {ocr_cf.oem} --psm {ocr_cf.psm}"
+    config = f'--oem {ocr_cf.oem} --psm {ocr_cf.psm} '
     text = pytesseract.image_to_string(img, lang='chi_sim+eng', config=config)
     text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)  # 去除中文字符间的空格
 
@@ -185,7 +185,7 @@ def save_to_database():
     text = text_box.get(1.0, tk.END).strip()
     if not text:
         status_label.config(text="没有可保存的文本！", fg="red")
-        return
+        text = ''
     try:
         conn = sqlite3.connect("sources/ocr_results.db")
         cursor = conn.cursor()
@@ -312,6 +312,19 @@ def reload_pdf():
     except Exception as e:
         status_label.config(text=f"重新加载失败: {e}", fg="red")
 
+def ocr_all_poges():
+    """
+    批量识别pdf代码
+    :return:
+    """
+    cache_page = pdf_viewer.current_page
+    while(pdf_viewer.current_page<len(pdf_viewer.doc)):
+        status_label.config(text=f"正在识别第{pdf_viewer.current_page}页", fg="blue")
+        ocr_current_page()
+        save_to_database()
+        pdf_viewer.current_page += 1
+    status_label.config(text="识别结束",fg="green")
+    pdf_viewer.current_page = cache_page
 
 if __name__ == "__main__":
     # 创建 Tkinter 窗口
@@ -332,6 +345,7 @@ if __name__ == "__main__":
     menu.add_command(label="导入 PDF", command=load_pdf)
     menu.add_command(label="保存 PDF", command=save_pdf)
     menu.add_command(label="重新加载PDF", command=reload_pdf)
+    # menu.add_command(label="识别全部PDF", command=ocr_all_poges)
 
     # 状态显示标签
     status_label = tk.Label(menu_frame, text="", fg="blue")

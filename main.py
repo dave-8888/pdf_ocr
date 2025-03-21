@@ -14,6 +14,8 @@ from tkinter import scrolledtext
 
 from classes.ocr_config import ocr_cf
 from classes.pdf_viewer import pdf_viewer,page_viewer
+from classes.components import components
+from classes import db_units
 # 加载 PDF 文档
 pdf_viewer.doc = None
 # 状态文件路径
@@ -21,12 +23,14 @@ STATE_FILE = "cache_data/app_state.json"
 
 
 def load_pdf():
+    save_state()
     """加载 PDF 文件"""
     file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
     if file_path:
         pdf_viewer.doc = fitz.open(file_path)
         pdf_viewer.pdf_path = file_path
-        pdf_viewer.current_page = 0
+        pdf_viewer.current_page = db_units.load_state(file_path)
+        components.status_label.config(text=f"已打开: {file_path}，恢复到第 {pdf_viewer.current_page} 页", fg="blue")
         update_image()
 
 
@@ -113,12 +117,12 @@ def save_pdf():
         # 直接覆盖原 PDF
         if pdf_viewer.pdf_path:
             pdf_viewer.doc.save(pdf_viewer.pdf_path, incremental=True, encryption=0)  # 不弹出对话框，直接保存
-            status_label.config(text="当前页旋转并保存成功！", fg="green")
+            components.status_label.config(text="当前页旋转并保存成功！", fg="green")
         else:
-            status_label.config(text="错误：无法覆盖原 PDF（未找到路径）", fg="red")
+            components.status_label.config(text="错误：无法覆盖原 PDF（未找到路径）", fg="red")
     except Exception as e:
         traceback.print_exc()
-        status_label.config(text='错误,保存PDF操作错误',fg="red")
+        components.status_label.config(text='错误,保存PDF操作错误',fg="red")
 
 
 def zoom_in(event=None):
@@ -140,7 +144,7 @@ def ocr_current_page():
         return
     # 清空文本框并显示状态信息
     text_box.delete(1.0, tk.END)
-    status_label.config(text="正在识别，请稍候...", fg="blue")
+    components.status_label.config(text="正在识别，请稍候...", fg="blue")
     root.update_idletasks()
     page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
     pix = page_viewer.page.get_pixmap()
@@ -156,7 +160,7 @@ def ocr_current_page():
     text_box.delete(1.0, tk.END)
     text_box.insert(tk.END, text)
     # 更新状态
-    status_label.config(text="OCR 识别完成！", fg="blue")
+    components.status_label.config(text="OCR 识别完成！", fg="blue")
 
 
 def change_font(event=None):
@@ -166,14 +170,14 @@ def change_font(event=None):
         new_size = int(font_size_entry.get())  # 获取输入框中的字体大小
         text_box.config(font=(new_font, new_size))  # 设置新的字体大小
     except ValueError:
-        status_label.config(text="请输入有效的数字", fg="red")  # 错误提示
+        components.status_label.config(text="请输入有效的数字", fg="red")  # 错误提示
 
 # 事件处理函数
 def update_engine_mode(event):
     selected_mode = engine_dropdown.get()
     selected_oem = [key for key, value in engine_options.items() if value == selected_mode][0]
     ocr_cf.oem = selected_oem
-    status_label.config(text=f"OCR 引擎模式已修改为: {selected_mode}", fg="green")  # 错误提示
+    components.status_label.config(text=f"OCR 引擎模式已修改为: {selected_mode}", fg="green")  # 错误提示
 
 
 def focus_canvas(event):
@@ -184,7 +188,7 @@ def save_to_database():
     """将 OCR 识别的文本保存到 SQLite 数据库"""
     text = text_box.get(1.0, tk.END).strip()
     if not text:
-        status_label.config(text="没有可保存的文本！", fg="red")
+        components.status_label.config(text="没有可保存的文本！", fg="red")
         text = ''
     try:
         conn = sqlite3.connect("sources/ocr_results.db")
@@ -206,9 +210,9 @@ def save_to_database():
         """, (filename, pdf_viewer.current_page + 1, text))
         conn.commit()
         conn.close()
-        status_label.config(text="OCR 结果已保存或更新！", fg="green")
+        components.status_label.config(text="OCR 结果已保存或更新！", fg="green")
     except Exception as e:
-        status_label.config(text=f"保存失败: {e}", fg="red")
+        components.status_label.config(text=f"保存失败: {e}", fg="red")
 
 
 def load_text_from_database():
@@ -226,11 +230,11 @@ def load_text_from_database():
         text_box.delete(1.0, tk.END)  # 清空文本框
         if result:
             text_box.insert(tk.END, result[0])  # 显示查询到的文本
-            status_label.config(text="已加载 OCR 结果", fg="blue")
+            components.status_label.config(text="已加载 OCR 结果", fg="blue")
         else:
-            status_label.config(text="无 OCR 结果", fg="red")
+            components.status_label.config(text="无 OCR 结果", fg="red")
     except Exception as e:
-        status_label.config(text=f"查询失败: {e}", fg="red")
+        components.status_label.config(text=f"查询失败: {e}", fg="red")
 
 
 def show_menu(event):
@@ -258,6 +262,7 @@ def save_state():
 
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f)
+    db_units.save_state(pdf_viewer.pdf_path,pdf_viewer.current_page)
 
 
 def on_closing():
@@ -280,7 +285,7 @@ def load_state():
         pdf_viewer.current_page = state.get("current_page", 0)
         if pdf_viewer.pdf_path and os.path.exists(pdf_viewer.pdf_path):
             pdf_viewer.doc = fitz.open(pdf_viewer.pdf_path)  # 重新打开 PDF
-            status_label.config(text=f"恢复上次文件: {pdf_viewer.pdf_path}", fg="blue")
+            components.status_label.config(text=f"恢复上次文件: {pdf_viewer.pdf_path}", fg="blue")
             update_image()
         else:
             pdf_viewer.pdf_path = ""  # 避免无效路径
@@ -307,10 +312,10 @@ def reload_pdf():
 
         # 重新加载同名的 PDF 文件
         pdf_viewer.doc = fitz.open(pdf_viewer.pdf_path)
-        status_label.config(text="PDF 已重新加载", fg="green")
+        components.status_label.config(text="PDF 已重新加载", fg="green")
         update_image()
     except Exception as e:
-        status_label.config(text=f"重新加载失败: {e}", fg="red")
+        components.status_label.config(text=f"重新加载失败: {e}", fg="red")
 
 def ocr_all_poges():
     """
@@ -319,11 +324,11 @@ def ocr_all_poges():
     """
     cache_page = pdf_viewer.current_page
     while(pdf_viewer.current_page<len(pdf_viewer.doc)):
-        status_label.config(text=f"正在识别第{pdf_viewer.current_page}页", fg="blue")
+        components.status_label.config(text=f"正在识别第{pdf_viewer.current_page}页", fg="blue")
         ocr_current_page()
         save_to_database()
         pdf_viewer.current_page += 1
-    status_label.config(text="识别结束",fg="green")
+    components.status_label.config(text="识别结束",fg="green")
     pdf_viewer.current_page = cache_page
 
 if __name__ == "__main__":
@@ -348,8 +353,8 @@ if __name__ == "__main__":
     # menu.add_command(label="识别全部PDF", command=ocr_all_poges)
 
     # 状态显示标签
-    status_label = tk.Label(menu_frame, text="", fg="blue")
-    status_label.pack(side=tk.LEFT, padx=10)
+    components.status_label = tk.Label(menu_frame, text="", fg="blue")
+    components.status_label.pack(side=tk.LEFT, padx=10)
     # 创建一个可调节的 PanedWindow
     paned_window = tk.PanedWindow(root, orient=tk.HORIZONTAL)
     paned_window.pack(fill=tk.BOTH, expand=True)

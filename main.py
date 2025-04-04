@@ -7,7 +7,7 @@ import traceback
 import fitz  # PyMuPDF
 import tkinter as tk
 from tkinter import filedialog, ttk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk,ImageEnhance, ImageOps
 import pytesseract
 import re
 from tkinter import scrolledtext
@@ -136,6 +136,20 @@ def zoom_out(event=None):
     pdf_viewer.resize_factor /= 1.1
     update_image()
 
+def preprocess_image(img):
+    """增强图片对比度，并进行二值化处理"""
+    # 调整对比度
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(2.0)  # 2.0 是对比度增强倍数，可以调节
+
+    # 转换为灰度图像
+    img = img.convert("L")
+
+    # 应用自适应二值化
+    img = ImageOps.autocontrast(img)
+
+    return img
+
 
 def ocr_current_page():
     """对当前 PDF 页面进行 OCR 识别，并显示在右侧文本框中"""
@@ -150,10 +164,12 @@ def ocr_current_page():
     pix = page_viewer.page.get_pixmap()
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     img = img.rotate(page_viewer.page.rotation, expand=True)  # 应用旋转角度
+    # 预处理（增强对比度+二值化）
+    processed_img = preprocess_image(img)
 
     # OCR 识别
     config = f'--oem {ocr_cf.oem} --psm {ocr_cf.psm} '
-    text = pytesseract.image_to_string(img, lang='chi_sim+eng', config=config)
+    text = pytesseract.image_to_string(processed_img, lang='chi_sim+eng', config=config)
     text = re.sub(r'([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', r'\1', text)  # 去除中文字符间的空格
 
     # 在文本框中显示结果

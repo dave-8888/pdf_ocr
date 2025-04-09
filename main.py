@@ -40,7 +40,8 @@ def update_image():
     if pdf_viewer.doc is None:
         return
     page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
-    pix = page_viewer.page.get_pixmap()
+    mat = fitz.Matrix(3, 3)  # 放大2倍
+    pix = page_viewer.page.get_pixmap(matrix=mat)
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     # 计算窗口高度的 80%
     window_height = root.winfo_height()  # 获取窗口当前高度
@@ -161,7 +162,8 @@ def ocr_current_page():
     components.status_label.config(text="正在识别，请稍候...", fg="blue")
     root.update_idletasks()
     page_viewer.page = pdf_viewer.doc[pdf_viewer.current_page]
-    pix = page_viewer.page.get_pixmap()
+    mat = fitz.Matrix(3, 3)
+    pix = page_viewer.page.get_pixmap(matrix=mat)
     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     img = img.rotate(page_viewer.page.rotation, expand=True)  # 应用旋转角度
     # 预处理（增强对比度+二值化）
